@@ -1,0 +1,27 @@
+/* کنترل لمسی و واکنش‌گرایی */
+#touch { position: absolute; inset: 0; z-index: 15; touch-action: none; }
+#touch.editing { background: rgba(0, 0, 0, .55); z-index: 40; }
+.tb { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid rgba(255, 255, 255, .38); background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .22), rgba(20, 30, 36, .5)); color: #fff; font-family: inherit; padding: 0; display: flex; align-items: center; justify-content: center; touch-action: none; opacity: .82; text-shadow: 0 1px 3px #000; }
+.tb span { pointer-events: none; line-height: 1; }
+.tb.fire { background: radial-gradient(circle at 35% 30%, rgba(255, 150, 90, .55), rgba(160, 30, 20, .55)); border-color: rgba(255, 190, 150, .6); }
+.tb.down { transform: translate(-50%, -50%) scale(.9); opacity: 1; background-color: rgba(255, 255, 255, .25); }
+.tb.active { border-color: var(--acc2); box-shadow: 0 0 12px var(--acc); }
+#touch.editing .tb { opacity: 1; outline: 2px dashed var(--acc2); }
+#joy, #joyHint { position: absolute; width: 124px; height: 124px; transform: translate(-50%, -50%); pointer-events: none; }
+#joyHint { left: 15%; top: 70%; opacity: .5; } #joy { display: none; } #joy.on { display: block; }
+.ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .06); }
+#touch.editing #joyHint { display: block !important; opacity: 1; outline: 2px dashed var(--acc2); border-radius: 50%; }
+#joyKnob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .65), rgba(255, 255, 255, .25)); border: 2px solid rgba(255, 255, 255, .6); }
+#editBar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; gap: 10px; align-items: center; background: rgba(0, 0, 0, .85); border: 1px solid var(--acc); border-radius: 12px; padding: 8px 14px; font-size: 14px; }
+
+@media (max-height: 430px) {
+  .logo { font-size: 38px; } .logo.sm { font-size: 30px; } .btn { min-height: 34px; padding: 6px 12px; font-size: 14px; } .menuBtn { min-height: 38px; font-size: 14.5px; }
+  .card { padding: 8px 10px; } .lvl { min-height: 96px; } .lvl .num { font-size: 22px; } .brief .story { font-size: 13.5px; line-height: 1.7; }
+  .bar h2 { font-size: 17px; } .wgrid { grid-template-columns: repeat(4, 1fr); } .ammo { font-size: 24px; }
+}
+@media (max-width: 760px) {
+  .menu { flex-direction: row; gap: 10px; } .logo.sm { font-size: 26px; } .sub { display: none; }
+  .lvlGrid, .wgrid { grid-template-columns: repeat(3, 1fr); } .achGrid { grid-template-columns: repeat(2, 1fr); } .shopCols { grid-template-columns: 150px 1fr; }
+  .setWrap, .helpWrap, .profWrap { grid-template-columns: 1fr; } .helpWrap .card:last-child, .srow:last-child { grid-column: auto; } .briefWrap { grid-template-columns: 1fr; }
+  #radar { width: 80px; height: 80px; } #bars { top: calc(max(8px, env(safe-area-inset-top)) + 86px); width: 110px; }
+}

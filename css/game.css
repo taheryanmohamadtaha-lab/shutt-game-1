@@ -1,0 +1,46 @@
+/* HUD داخل بازی */
+#hud { position: absolute; inset: 0; pointer-events: none; z-index: 10; font-weight: 700; text-shadow: 0 1px 3px #000; }
+#radar { position: absolute; top: max(8px, env(safe-area-inset-top)); inset-inline-start: max(10px, env(safe-area-inset-left)); width: 96px; height: 96px; }
+#bars { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 102px); inset-inline-start: max(10px, env(safe-area-inset-left)); width: 130px; display: flex; flex-direction: column; gap: 4px; }
+.meter { position: relative; height: 16px; background: rgba(0, 0, 0, .55); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.meter i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #2fb85f, #7dff9a); width: 100%; transition: width .15s; }
+[dir=rtl] .meter i { inset: 0 0 0 auto; }
+.meter.ar i { background: linear-gradient(90deg, #2a7fd1, #7cc4ff); }
+.meter i.low { background: linear-gradient(90deg, #c93a40, #ff7a80); animation: blink .6s infinite; }
+.meter b { position: absolute; inset: 0; text-align: center; font-size: 12px; line-height: 16px; }
+.meter em { position: absolute; top: 0; inset-inline-end: 4px; font-style: normal; font-size: 11px; line-height: 16px; opacity: .8; }
+@keyframes blink { 50% { opacity: .5; } }
+#objective { position: absolute; top: max(6px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); text-align: center; background: rgba(0, 0, 0, .38); border-radius: 10px; padding: 4px 16px; min-width: 190px; }
+#objTitle { font-size: 13px; color: var(--acc2); } #objSub { font-size: 15px; min-height: 18px; }
+#timer { position: absolute; top: calc(max(6px, env(safe-area-inset-top)) + 54px); left: 50%; transform: translateX(-50%); font-size: 18px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+#timer.low { color: var(--red); animation: blink .7s infinite; }
+#scoreBox { position: absolute; top: calc(max(6px, env(safe-area-inset-top)) + 82px); left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--acc2); }
+#killfeed { position: absolute; top: 58px; inset-inline-end: max(10px, env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+.kf { background: rgba(0, 0, 0, .5); border-inline-end: 3px solid var(--red); padding: 2px 10px; font-size: 13px; border-radius: 4px; animation: kfin .2s; } .kf.head { border-color: var(--acc2); color: var(--acc2); }
+@keyframes kfin { from { transform: translateX(30px); opacity: 0; } }
+#radio { position: absolute; top: 26%; left: 50%; transform: translateX(-50%); background: rgba(8, 20, 14, .72); border: 1px solid rgba(61, 220, 132, .5); padding: 6px 18px; border-radius: 6px; font-size: 15px; opacity: 0; transition: opacity .25s; text-align: center; max-width: 70%; }
+#radio.on { opacity: 1; }
+#crosshair { position: absolute; left: 50%; top: 50%; width: 0; height: 0; --sp: 10px; }
+#crosshair i { position: absolute; background: #fff; box-shadow: 0 0 2px #000, 0 0 1px #000; opacity: .9; }
+#crosshair i:nth-child(1), #crosshair i:nth-child(2) { width: 2px; height: 9px; left: -1px; } #crosshair i:nth-child(1) { top: calc(-9px - var(--sp)); } #crosshair i:nth-child(2) { top: var(--sp); }
+#crosshair i:nth-child(3), #crosshair i:nth-child(4) { height: 2px; width: 9px; top: -1px; } #crosshair i:nth-child(3) { left: calc(-9px - var(--sp)); } #crosshair i:nth-child(4) { left: var(--sp); }
+#crosshair u { position: absolute; left: -1px; top: -1px; width: 2px; height: 2px; background: #f55; }
+#hitmark { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px; opacity: 0; transform: rotate(45deg); }
+#hitmark::before, #hitmark::after { content: ''; position: absolute; background: #fff; } #hitmark::before { left: 14px; top: 0; width: 2px; height: 30px; } #hitmark::after { top: 14px; left: 0; height: 2px; width: 30px; }
+#hitmark.on { opacity: .95; } #hitmark.head::before, #hitmark.head::after { background: var(--acc2); } #hitmark.kill::before, #hitmark.kill::after { background: #ff4040; }
+#vignette { position: absolute; inset: 0; opacity: 0; transition: opacity .25s; background: radial-gradient(ellipse at center, transparent 45%, rgba(190, 0, 0, .75) 100%); }
+#hurtDirs { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.hd { position: absolute; left: -60px; top: -150px; width: 120px; height: 56px; transform-origin: 60px 150px; background: radial-gradient(ellipse at 50% 0, rgba(255, 40, 40, .9), transparent 70%); animation: hdfade .9s forwards; }
+@keyframes hdfade { to { opacity: 0; } }
+#scope { position: absolute; inset: 0; display: none; background: radial-gradient(circle at center, transparent 0, transparent 34vh, #000 34.6vh); }
+#scope::before, #scope::after { content: ''; position: absolute; background: rgba(0, 0, 0, .85); }
+#scope::before { left: 50%; top: 50%; width: 1px; height: 66vh; transform: translate(-50%, -50%); } #scope::after { left: 50%; top: 50%; height: 1px; width: 66vh; transform: translate(-50%, -50%); }
+body.scoped #scope { display: block; } body.scoped #ammoBox { opacity: .7; }
+#markers .mk { position: absolute; transform: translate(-50%, -100%); text-align: center; font-size: 12px; white-space: nowrap; }
+#markers .mk b { display: block; margin: 0 auto 2px; width: 14px; height: 14px; transform: rotate(45deg); background: var(--acc); border: 2px solid #fff; }
+#markers .mk.safe b { background: var(--grn); } #markers .mk.tgt b { background: #ffd23a; } #markers .mk span { background: rgba(0, 0, 0, .5); padding: 1px 6px; border-radius: 4px; }
+#ammoBox { position: absolute; bottom: max(10px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); text-align: center; background: rgba(0, 0, 0, .38); border-radius: 10px; padding: 4px 18px; direction: ltr; }
+#wName { font-size: 12px; color: var(--acc2); direction: rtl; } .ammo { font-size: 28px; line-height: 1.05; font-variant-numeric: tabular-nums; } #ammoMag.low { color: var(--red); } .sl { opacity: .5; margin: 0 4px; } #ammoRes { font-size: 18px; opacity: .85; } .gren { font-size: 14px; }
+#reloadBar { position: absolute; left: 50%; top: 58%; width: 120px; height: 5px; margin-left: -60px; background: rgba(0, 0, 0, .5); border-radius: 3px; overflow: hidden; display: none; } #reloadBar.on { display: block; } #reloadFill { display: block; height: 100%; background: var(--acc2); }
+body.nv #nvOverlay { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, .6) 100%), repeating-linear-gradient(0deg, rgba(0, 0, 0, .12) 0 1px, transparent 1px 3px); }
+body.nv #hud { color: #7dff7d; }

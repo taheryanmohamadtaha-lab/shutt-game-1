@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>عملیات سایه | Shadow Operation</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/images/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/game.css">
+<link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+
+  <div id="hud" class="hidden">
+    <canvas id="radar" width="120" height="120"></canvas>
+    <div id="bars">
+      <div class="meter hp"><i id="hpFill"></i><b id="hpText"></b><em>♥</em></div>
+      <div class="meter ar"><i id="arFill"></i><b id="arText"></b><em>⛨</em></div>
+    </div>
+    <div id="objective"><div id="objTitle"></div><div id="objSub"></div></div>
+    <div id="timer"></div>
+    <div id="scoreBox">★ <span id="scoreN">0</span></div>
+    <div id="killfeed"></div>
+    <div id="radio"></div>
+    <div id="crosshair"><i></i><i></i><i></i><i></i><u></u></div>
+    <div id="hitmark"></div>
+    <div id="vignette"></div>
+    <div id="hurtDirs"></div>
+    <div id="scope"></div>
+    <div id="markers"></div>
+    <div id="ammoBox">
+      <div id="wName"></div>
+      <div class="ammo"><span id="ammoMag">0</span><span class="sl">/</span><span id="ammoRes">0</span></div>
+      <div class="gren">💣 <span id="grenN">0</span></div>
+    </div>
+    <div id="reloadBar"><i id="reloadFill"></i></div>
+    <div id="nvOverlay"></div>
+  </div>
+
+  <div id="touch" class="hidden">
+    <div id="joyHint"><div class="ring"></div></div>
+    <div id="joy"><div class="ring"></div><div id="joyKnob"></div></div>
+    <button class="tb fire" data-b="fire"><span>🔥</span></button>
+    <button class="tb" data-b="ads"><span>◎</span></button>
+    <button class="tb" data-b="jump"><span>⤒</span></button>
+    <button class="tb" data-b="crouch"><span>⤓</span></button>
+    <button class="tb" data-b="reload"><span>⟳</span></button>
+    <button class="tb" data-b="grenade"><span>💣</span></button>
+    <button class="tb" data-b="swap"><span>⇄</span></button>
+    <button class="tb" data-b="sprint"><span>»</span></button>
+    <button class="tb" data-b="nv" style="display:none"><span>NV</span></button>
+    <button class="tb" data-b="pause"><span>II</span></button>
+  </div>
+
+  <div id="screens" class="hidden"></div>
+  <div id="editBar" class="hidden"><span>اجزا را با انگشت بکش و جابه‌جا کن</span><button class="btn sm" data-edit="reset">بازنشانی</button><button class="btn primary sm" data-edit="done">ذخیره</button></div>
+  <div id="toast"></div>
+  <div id="rotate"><div>📱↻</div><p>لطفاً گوشی را افقی بگیرید<br><small>Please rotate your device</small></p></div>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game-engine.js"></script>
+<script src="js/world.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/missions.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/player.js"></script>
+<script src="js/controls.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

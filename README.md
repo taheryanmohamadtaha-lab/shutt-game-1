@@ -1,0 +1,63 @@
+# 🎮 عملیات سایه (Shadow Operation)
+
+بازی تیراندازی سه‌بعدی اول‌شخص فارسی برای موبایل، ساخته‌شده با HTML5 / CSS / JavaScript (موتور WebGL اختصاصی، بدون وابستگی خارجی) و قابل تبدیل به APK اندروید با Capacitor.
+
+## ویژگی‌ها
+- ۸ مأموریت با محیط‌ها و هدف‌های متفاوت (پایگاه، شهر، گروگان‌گیری، تک‌تیرانداز، شبانه، زیرزمینی، نبرد نهایی)
+- دشمنان هوشمند با انواع مختلف و باس‌فایت
+- سلاح‌های متنوع، خشاب و مهمات، نارنجک، ارتقا و فروشگاه
+- کنترل لمسی افقی، چیدمان دکمه‌ها قابل شخصی‌سازی
+- منو و متن‌ها کاملاً فارسی و راست‌چین، ذخیرهٔ خودکار پیشرفت
+- اجرای آفلاین
+
+## اجرا روی کامپیوتر
+```bash
+npm run serve   # سپس http://localhost:8080 را باز کنید
+```
+(یا فایل `index.html` را مستقیم در مرورگر باز کنید.)
+
+## ساختار
+```
+index.html  manifest.json  sw.js
+css/   js/   assets/
+scripts/            ابزارهای ساخت (build-web.js و patch-android.js)
+capacitor.config.json  package.json
+.github/workflows/android-apk.yml
+```
+
+## ۱) قرار دادن پروژه در GitHub
+کل پوشهٔ پروژه را در شاخهٔ `main` مخزن خود پوش کنید. با هر پوش، ساخت APK خودکار شروع می‌شود.
+
+## ۲) دانلود فایل APK
+1. در مخزن به تب **Actions** بروید.
+2. آخرین اجرای **Build Android APK** را باز کنید (باید ✅ سبز باشد).
+3. پایین صفحه، در بخش **Artifacts**، فایل `shadow-operation-debug-apk` را دانلود کنید و از حالت ZIP خارج کنید.
+4. فایل داخل آن `app-debug.apk` است.
+
+برای ساخت دستی: Actions ← Build Android APK ← **Run workflow**.
+
+## ۳) نصب روی گوشی اندروید
+1. فایل `app-debug.apk` را به گوشی منتقل کنید.
+2. در تنظیمات گوشی نصب از «منابع ناشناس» را برای برنامهٔ مدیریت فایل فعال کنید.
+3. روی فایل بزنید و نصب کنید. بازی بعد از نصب آفلاین اجرا می‌شود.
+
+## ۴) به‌روزرسانی در نسخه‌های بعدی
+1. فایل‌های بازی را تغییر دهید و پوش کنید؛ APK جدید خودکار ساخته می‌شود.
+2. APK جدید را دانلود و روی نسخهٔ قبلی نصب کنید (پیشرفت بازی در حافظهٔ برنامه حفظ می‌شود).
+3. برای هر نسخهٔ جدید، مقدار `CACHE` را در `sw.js` عوض کنید.
+
+## ساخت نسخهٔ Release (اختیاری)
+1. کلید امضا بسازید: `keytool -genkey -v -keystore release.keystore -alias shadow -keyalg RSA -keysize 2048 -validity 10000`
+2. در پوشهٔ `android` دستور `./gradlew assembleRelease` را بزنید.
+3. فایل را با `apksigner sign --ks release.keystore app-release-unsigned.apk` امضا کنید.
+فایل کلید را هرگز در مخزن قرار ندهید.
+
+## ساخت محلی APK
+نیازمند Node 20+ و JDK 21 و Android SDK:
+```bash
+npm install
+npm run build:web
+npx cap add android
+npm run android:debug
+```
+خروجی: `android/app/build/outputs/apk/debug/app-debug.apk`

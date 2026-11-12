@@ -1,0 +1,9 @@
+{
+  "appId": "com.shadowoperation.game",
+  "appName": "عملیات سایه",
+  "webDir": "www",
+  "backgroundColor": "#0b0f14",
+  "android": {
+    "allowMixedContent": false
+  }
+}
