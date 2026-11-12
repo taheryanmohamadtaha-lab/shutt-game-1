@@ -316,7 +316,7 @@ const P = {
     const bx = Math.sin(this.bob) * 0.012 * Math.min(1, this.speed / 4) * (1 - ads * 0.9);
     const by = Math.abs(Math.cos(this.bob)) * 0.01 * Math.min(1, this.speed / 4) * (1 - ads * 0.9);
     let ox = 0.15 * (1 - ads) + bx - 0.07 * this.sprintK;
-    let oy = -0.15 * (1 - ads) - g.sightY * ads * 0.98 + by - 0.04 * this.sprintK;
+    let oy = -0.105 * (1 - ads) - g.sightY * ads * 0.98 + by - 0.04 * this.sprintK;
     let oz = -0.27 - 0.03 * ads + this.rz;
     oy += Math.sin(tm * 1.4) * 0.002;
     let rxg = this.rz * 3 + this.sprintK * 0.25, ryg = this.sprintK * 0.55;
@@ -334,12 +334,18 @@ const P = {
       (mat === 2 ? vmt : vm).box(ox + x3, oy + y2, oz + z3, sx, sy, sz, ryg, rxg, col, a === undefined ? 1 : a, mat || 0, 0);
     };
     for (const p of g.parts) put(p[0], p[1], p[2], p[3], p[4], p[5], PAL[p[6]] || p[6], p[6] === 'blue' || p[6] === 'gold' ? 2 : 0);
-    // دست‌ها
+    // دست‌ها: بازوهای مدل Heavy با IK؛ در صورت نبود مدل، دستکش‌های جعبه‌ای
     const bh = w.model.bh, bl = w.model.bl;
-    put(0.0, -bh / 2 - 0.05, 0.0, 0.07, 0.1, 0.09, PAL.glove);
-    put(0.01, -bh / 2 - 0.13, 0.12, 0.075, 0.075, 0.3, PAL.glove);
-    put(-0.005, -bh / 2 - 0.03, -(bl + (w.model.guard || 0.05) * 0.55), 0.08, 0.075, 0.1, PAL.glove);
-    put(-0.04, -bh / 2 - 0.1, -(bl * 0.45) + 0.12, 0.07, 0.07, 0.28, PAL.glove, 0);
+    const gtv = (x, y, z) => { const y2 = y * ca - z * sa, z2 = y * sa + z * ca; return [ox + x * cyy + z2 * syy, oy + y2, oz - x * syy + z2 * cyy]; };
+    const gdv = (x, y, z) => { const y2 = y * ca - z * sa, z2 = y * sa + z * ca; return [x * cyy + z2 * syy, y2, -x * syy + z2 * cyy]; };
+    const short = bl < 0.18;
+    const lg = short ? [-0.03, -bh / 2 - 0.05, -0.05] : [-0.005, -bh / 2 - 0.03, -(bl + (w.model.guard || 0.05) * 0.55)];
+    if (!(typeof Arms !== 'undefined' && Arms.draw(gtv, gdv, [0, -bh / 2 - 0.05, 0], lg))) {
+      put(0.0, -bh / 2 - 0.05, 0.0, 0.07, 0.1, 0.09, PAL.glove);
+      put(0.01, -bh / 2 - 0.13, 0.12, 0.075, 0.075, 0.3, PAL.glove);
+      put(-0.005, -bh / 2 - 0.03, -(bl + (w.model.guard || 0.05) * 0.55), 0.08, 0.075, 0.1, PAL.glove);
+      put(-0.04, -bh / 2 - 0.1, -(bl * 0.45) + 0.12, 0.07, 0.07, 0.28, PAL.glove, 0);
+    }
     if (this.flashT > 0 && this.ads < 0.9 || (this.flashT > 0 && !w.scoped)) {
       const m = g.muzzle, sz = 0.06 + Math.random() * 0.05;
       put(m[0], m[1], m[2] - 0.04, sz, sz, 0.08 + Math.random() * 0.06, w.energy ? [0.4, 0.75, 1] : [1, 0.85, 0.4], 2, 0.95);

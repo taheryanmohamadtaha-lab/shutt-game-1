@@ -191,7 +191,7 @@ void main(){
 
 
   /* ---------- رندر اسکلتی (GPU skinning) ---------- */
-  const skinQueue = [];
+  const skinQueue = [], vmSkinQueue = [];
   function skinVS(nb) {
     return `
 attribute vec3 aPos; attribute vec3 aNor; attribute vec2 aUV; attribute vec4 aJ; attribute vec4 aW;
@@ -263,7 +263,7 @@ void main(){
     return t;
   }
   /* sk: خروجی buildSkinned؛ images: {texIndex: HTMLImageElement}. در صورت نبود پشتیبانی خطا می‌دهد */
-  function skinCreate(sk, images) {
+  function skinCreate(sk, images, sharedTex) {
     const maxU = gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS);
     if (sk.nUsed * 3 + 8 > maxU) throw new Error('skin: not enough vertex uniforms (' + maxU + ')');
     const p = link(skinVS(sk.nUsed), SKIN_FS, ['aPos', 'aNor', 'aUV', 'aJ', 'aW']);
@@ -271,7 +271,7 @@ void main(){
     const white = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, white);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    const texCache = {};
+    const texCache = sharedTex || {};
     const parts = sk.prims.map((pr) => {
       const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, pr.verts, gl.STATIC_DRAW);
       const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
@@ -282,7 +282,7 @@ void main(){
     });
     return { prog: p, U: U2, parts, nb: sk.nUsed };
   }
-  function drawSkins(q, lights, nv, time) {
+  function drawSkins(q, lights, nv, time, o) {
     if (!q.length) return;
     let cur = null;
     for (const it of q) {
@@ -290,10 +290,11 @@ void main(){
       if (cur !== m) {
         cur = m; const u = m.U;
         gl.useProgram(m.prog);
-        gl.uniformMatrix4fv(u.uVP, false, vp);
-        gl.uniform3f(u.uCam, lastCam.x, lastCam.y, lastCam.z);
-        gl.uniform3fv(u.uFogCol, env.fog); gl.uniform1f(u.uFogD, env.fogD);
-        gl.uniform3fv(u.uAmb, env.amb); gl.uniform3fv(u.uSunDir, env.sunDir); gl.uniform3fv(u.uSunCol, env.sunCol);
+        gl.uniformMatrix4fv(u.uVP, false, o ? o.vp : vp);
+        if (o) gl.uniform3f(u.uCam, 0, 0, 0); else gl.uniform3f(u.uCam, lastCam.x, lastCam.y, lastCam.z);
+        gl.uniform3fv(u.uFogCol, env.fog); gl.uniform1f(u.uFogD, o ? 0 : env.fogD);
+        if (o) { gl.uniform3fv(u.uAmb, o.amb); gl.uniform3fv(u.uSunDir, o.sunDir); gl.uniform3fv(u.uSunCol, o.sunCol); }
+        else { gl.uniform3fv(u.uAmb, env.amb); gl.uniform3fv(u.uSunDir, env.sunDir); gl.uniform3fv(u.uSunCol, env.sunCol); }
         gl.uniform1f(u.uNV, nv ? 1 : 0); gl.uniform1f(u.uTime, time);
         gl.uniform4fv(u.uLP, lpArr); gl.uniform3fv(u.uLC, lcArr);
         gl.uniform1i(u.uBase, 0); gl.activeTexture(gl.TEXTURE0);
@@ -517,7 +518,7 @@ void main(){
     }
 
     /* سلاح در دست (فضای دوربین) */
-    if ((vmBatch && vmBatch.n) || (vmTrans && vmTrans.n)) {
+    if ((vmBatch && vmBatch.n) || (vmTrans && vmTrans.n) || vmSkinQueue.length) {
       gl.clear(gl.DEPTH_BUFFER_BIT);
       perspective(60 * Math.PI / 180, aspect, 0.03, 10, vmProj);
       gl.uniformMatrix4fv(U.uVP, false, vmProj);
@@ -528,6 +529,10 @@ void main(){
       lpArr.fill(0); lcArr.fill(0);
       gl.uniform4fv(U.uLP, lpArr); gl.uniform3fv(U.uLC, lcArr);
       drawDyn(bufVM, vmBatch);
+      if (vmSkinQueue.length) {
+        drawSkins(vmSkinQueue, lights, false, time, { vp: vmProj, amb: [Math.max(env.amb[0], 0.5), Math.max(env.amb[1], 0.5), Math.max(env.amb[2], 0.5)], sunDir: [0.3, 0.8, 0.5], sunCol: [0.6, 0.6, 0.55] });
+        vmSkinQueue.length = 0;
+      }
       if (vmTrans && vmTrans.n) { gl.depthMask(false); drawDyn(bufTrans, vmTrans); gl.depthMask(true); }
     }
   }
@@ -541,5 +546,5 @@ void main(){
     return true;
   }
 
-  return { skinQueue, skinCreate, init, resize, setStatic, setEnv, setFov, render, project, Batch, FLOATS, get gl() { return gl; }, get aspect() { return aspect; } };
+  return { skinQueue, vmSkinQueue, skinCreate, init, resize, setStatic, setEnv, setFov, render, project, Batch, FLOATS, get gl() { return gl; }, get aspect() { return aspect; } };
 })();

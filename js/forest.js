@@ -42,7 +42,7 @@ const Forest = (() => {
   }
 
   F.load = load;
-  F.build = function () {
+  F.build = function (envName) {
     const M = F.model;
     // مرکز نقشه را به مبدأ می‌بریم
     const raw = M.triangles('Forest_Terrain', 0, 0);
@@ -53,7 +53,7 @@ const Forest = (() => {
     const T = heightmap(tris, 0.5);
     const half = Math.ceil(Math.max(a1 - a0, b1 - b0) / 2) + 1;
 
-    const L = new Level(ENVS.valley, half, 101);
+    const L = new Level(ENVS[envName || 'valley'], half, 101);
     L.batch = new GE.Batch(330000);
     L.terrain = T;
     const deco = new GE.Batch(330000);

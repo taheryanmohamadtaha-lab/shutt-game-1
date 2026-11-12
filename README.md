@@ -69,3 +69,10 @@ npx cap add android
 npm run android:debug
 ```
 خروجی: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+## مدل‌های سه‌بعدی (GLB)
+- `assets/models/heavy.glb`: کاراکتر دشمنان و بازوهای اول‌شخص بازیکن
+- `assets/models/forest.glb`: دره جنگلی (مأموریت‌های ۱ و ۵)
+- `assets/models/tropic.glb` و `tropic-map.json`: شهر ساحلی (مأموریت ۳). با `tools/prep-tropic.js` از مدل اصلی برش و سبک‌سازی شده است.
+
+⚠️ مدل Heavy متعلق به Valve (Team Fortress 2) است؛ قبل از انتشار عمومی برنامه، مجوز آن را بررسی یا مدل را عوض کنید.

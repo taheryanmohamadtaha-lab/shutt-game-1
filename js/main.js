@@ -228,7 +228,7 @@ function endMission(win, why) {
   const res = { win, why, mission: m, score, kills: S.kills, headshots: S.headshots, acc, time: G.time, coins, xp, stars, bonusOk, timeBonus, accBonus, rankUp: Store.rank() > oldRank, first };
   const newAch = UI.checkAch(res);
   res.newAch = newAch;
-  setTimeout(() => { if (G && G.state === 'end') UI.showResult(res); }, win ? 1400 : 1800);
+  setTimeout(() => { if (G && G.state === 'end') UI.show('result', res); }, win ? 1400 : 1800);
 }
 function onPlayerDeath() {
   UI.radio(t('زخمی شدی!', 'You are down!'), '', 1500);
@@ -448,6 +448,7 @@ function boot() {
   UI.show('splash');
   EModel.load('assets/models/heavy.glb');
   Forest.load('assets/models/forest.glb');
+  Tropic.load('assets/models/tropic.glb', 'assets/models/tropic-map.json');
   window.addEventListener('resize', () => { GE.resize(QUALITY[Store.d.settings.quality] || 0.78); });
   window.addEventListener('orientationchange', () => setTimeout(() => GE.resize(QUALITY[Store.d.settings.quality] || 0.78), 200));
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (G && G.state === 'play') pauseGame(); Store.save(); } });

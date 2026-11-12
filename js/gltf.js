@@ -101,7 +101,7 @@ const GLTF = (() => {
     bakeStatic(batch, opt) {
       opt = opt || {};
       const W = new Float32Array(16), info = [];
-      const ox = opt.ox || 0, oz = opt.oz || 0;
+      const ox = opt.ox || 0, oz = opt.oz || 0, oy = opt.oy || 0;
       this.j.nodes.forEach((n, ni) => {
         if (n.mesh === undefined || n.skin !== undefined) return;
         this.worldMatrix(ni, W);
@@ -121,7 +121,7 @@ const GLTF = (() => {
             const v = idx ? idx[k] : k;
             const px = pos.data[v * 3], py = pos.data[v * 3 + 1], pz = pos.data[v * 3 + 2];
             const wx = W[0] * px + W[4] * py + W[8] * pz + W[12] + ox;
-            const wy = W[1] * px + W[5] * py + W[9] * pz + W[13];
+            const wy = W[1] * px + W[5] * py + W[9] * pz + W[13] + oy;
             const wz = W[2] * px + W[6] * py + W[10] * pz + W[14] + oz;
             let nx = 0, ny = 1, nz = 0;
             if (nor) {

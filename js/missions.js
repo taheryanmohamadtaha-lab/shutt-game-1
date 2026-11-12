@@ -6,6 +6,7 @@ function norm3(x, y, z) { const l = Math.hypot(x, y, z); return [x / l, y / l, z
 const ENVS = {
   mountain: { skyTop: [0.25, 0.45, 0.8], skyHor: [0.72, 0.82, 0.92], fog: [0.62, 0.72, 0.82], fogD: 0.011, amb: [0.5, 0.55, 0.62], sunDir: norm3(0.5, 0.75, 0.35), sunCol: [0.95, 0.88, 0.72], sunDisc: [1, 0.9, 0.7], ground: [0.38, 0.4, 0.3], amb2: 'wind', music: 'tense' },
   desert: { skyTop: [0.35, 0.55, 0.85], skyHor: [0.95, 0.82, 0.62], fog: [0.88, 0.76, 0.58], fogD: 0.012, amb: [0.62, 0.55, 0.45], sunDir: norm3(-0.4, 0.8, 0.4), sunCol: [1, 0.9, 0.7], sunDisc: [1, 0.85, 0.5], ground: [0.68, 0.55, 0.36], amb2: 'wind', music: 'combat' },
+  tropic: { skyTop: [0.25, 0.52, 0.9], skyHor: [0.8, 0.9, 0.96], fog: [0.74, 0.84, 0.9], fogD: 0.008, amb: [0.64, 0.64, 0.62], sunDir: norm3(0.4, 0.8, 0.3), sunCol: [1, 0.93, 0.78], sunDisc: [1, 0.92, 0.72], ground: [0.76, 0.7, 0.5], amb2: 'sea', music: 'combat' },
   city: { skyTop: [0.38, 0.4, 0.44], skyHor: [0.62, 0.58, 0.54], fog: [0.5, 0.48, 0.46], fogD: 0.017, amb: [0.5, 0.48, 0.47], sunDir: norm3(0.3, 0.6, -0.5), sunCol: [0.7, 0.62, 0.5], sunDisc: [0.8, 0.6, 0.4], ground: [0.28, 0.28, 0.3], amb2: 'wind', music: 'combat' },
   port: { skyTop: [0.18, 0.3, 0.5], skyHor: [0.55, 0.62, 0.7], fog: [0.45, 0.52, 0.6], fogD: 0.015, amb: [0.42, 0.48, 0.56], sunDir: norm3(-0.6, 0.45, 0.3), sunCol: [0.8, 0.78, 0.7], sunDisc: [1, 0.8, 0.6], ground: [0.3, 0.32, 0.34], amb2: 'sea', music: 'tense' },
   forest: { skyTop: [0.08, 0.1, 0.14], skyHor: [0.22, 0.26, 0.3], fog: [0.15, 0.18, 0.2], fogD: 0.015, amb: [0.2, 0.25, 0.26], sunDir: norm3(0.2, 0.9, 0.1), sunCol: [0.25, 0.3, 0.38], sunDisc: [0, 0, 0], ground: [0.1, 0.18, 0.1], amb2: 'rain', rain: true, music: 'tense' },
@@ -62,6 +63,57 @@ function buildM1Valley() {
   const L = Forest.build();
   L.start = { x: -1.5, z: 25, yaw: 0 };
   for (const [x, z] of [[-3, 12], [5, 6], [-9, 1], [8, -5], [0, -9], [-6, 18]]) L.enemy('soldier', x, z, { patrol: true });
+  L.pickup('health', -3, 21); L.pickup('ammo', 3, 20); L.pickup('ammo', -10, 6); L.pickup('health', 9, 0);
+  return L;
+}
+
+
+/* انتخاب نقاط آزاد و پراکنده روی نقشه (فاصله از شروع و از یکدیگر) */
+function pickSpots(L, n, minStart, minBetween, cand) {
+  const pts = [];
+  const ok = (x, z) => !L.blocked(x, z, 0.7, L.terrain ? L.terrain.h(x, z) : 0, 1.8);
+  let list = cand;
+  if (!list) { list = []; const h = L.half - 3; for (let x = -h; x <= h; x += 3) for (let z = -h; z <= h; z += 3) list.push([x, z]); }
+  list = list.filter(([x, z]) => ok(x, z) && Math.hypot(x - L.start.x, z - L.start.z) >= minStart);
+  for (let k = 0; k < n && list.length; k++) {
+    // دورترین نقطه از انتخاب‌های قبلی (و شروع)
+    let best = null, bd = -1;
+    for (const c of list) {
+      let d = Math.hypot(c[0] - L.start.x, c[1] - L.start.z) * 0.5;
+      for (const q of pts) d = Math.min(d, Math.hypot(c[0] - q[0], c[1] - q[1]));
+      if (d > bd + 1e-6 && (pts.length === 0 || d >= minBetween * 0.6)) { bd = d; best = c; }
+    }
+    if (!best) break;
+    pts.push(best); list = list.filter((c) => c !== best);
+  }
+  return pts;
+}
+
+/* ======================== مرحله ۳ (نسخهٔ شهر ساحلی با مدل GLB) ======================== */
+function buildM3Tropic() {
+  if (!Tropic.ready) return buildM3();
+  const L = Tropic.build(ENVS.tropic);
+  const types = [['soldier'], ['soldier'], ['soldier'], ['soldier'], ['soldier'], ['soldier'], ['rusher'], ['rusher'], ['armored'], ['soldier'], ['soldier'], ['soldier'], ['soldier'], ['rusher'], ['soldier'], ['sniper', { hold: true }]];
+  const spots = pickSpots(L, types.length + 6, 14, 6, L.spawnSpots);
+  types.forEach((t, i) => { const p = spots[i]; if (p) L.enemy(t[0], p[0], p[1], Object.assign({ patrol: t[0] !== 'sniper' }, t[1] || {})); });
+  spots.slice(types.length).forEach((p, i) => L.pickup(i % 2 ? 'ammo' : 'health', p[0], p[1]));
+  L.pickup('health', L.start.x - 3, L.start.z - 2); L.pickup('ammo', L.start.x + 3, L.start.z - 2);
+  return L;
+}
+
+/* ======================== مرحله ۵ (نسخهٔ دره جنگلی بارانی با مدل GLB) ======================== */
+function buildM5Valley() {
+  if (!Forest.ready) return buildM5();
+  const L = Forest.build('forest');
+  L.start = { x: -1.5, z: 25, yaw: 0 };
+  const off = pickSpots(L, 5, 22, 10);
+  for (const [x, z] of off) {
+    L.enemy('officer', x, z, { hold: true, target: true });
+    const g = pickSpots(L, 6, 0, 0, [[x + 5, z - 3], [x - 5, z + 4], [x + 4, z + 5], [x - 4, z - 5], [x + 7, z], [x - 7, z]]).slice(0, 2);
+    for (const [gx, gz] of g) L.enemy('soldier', gx, gz, { patrol: true });
+  }
+  const r = pickSpots(L, 2, 12, 8);
+  for (const [x, z] of r.slice(0, 1)) L.enemy('rusher', x, z, { patrol: true });
   L.pickup('health', -3, 21); L.pickup('ammo', 3, 20); L.pickup('ammo', -10, 6); L.pickup('health', 9, 0);
   return L;
 }
@@ -322,7 +374,7 @@ const MISSIONS = [
     par: 240, reward: 600, xp: 180, bonus: { type: 'kills', n: 8, fa: '۸ دشمن را از بین ببر', en: 'Kill 8 enemies' },
   },
   {
-    id: 3, build: buildM3, fa: 'شهر متروکه', en: 'Abandoned City', area: 'شهر جنگ‌زده', areaEn: 'War-torn City',
+    id: 3, build: buildM3Tropic, fa: 'شهر متروکه', en: 'Abandoned City', area: 'شهر ساحلی متروکه', areaEn: 'Abandoned Coastal Town',
     brief: 'سرگرد کیان: «شهر متروکه پر از نیروهای مهاجم است. در خیابان‌ها پشت موانع پناه بگیر؛ مهاجمان سریع از ساختمان‌ها بیرون می‌آیند. همه را پاک‌سازی کن.»',
     briefEn: 'Major Kian: "The ruined city is full of raiders. Use cover in the streets; fast rushers will pour from the buildings. Clear them all."',
     type: 'kill', obj: 'شهر را از دشمن پاک‌سازی کن', objEn: 'Clear the city of hostiles',
@@ -336,7 +388,7 @@ const MISSIONS = [
     par: 360, reward: 1000, xp: 300, bonus: { type: 'noAlarm', fa: 'هیچ گروگانی آسیب نبیند', en: 'No hostage harmed' },
   },
   {
-    id: 5, build: buildM5, fa: 'عملیات تک‌تیرانداز', en: 'Sniper Operation', area: 'جنگل تاریک و بارانی', areaEn: 'Dark Rainy Forest',
+    id: 5, build: buildM5Valley, fa: 'عملیات تک‌تیرانداز', en: 'Sniper Operation', area: 'جنگل تاریک و بارانی', areaEn: 'Dark Rainy Forest',
     brief: 'سرگرد کیان: «پنج افسر دشمن در جنگل پراکنده‌اند. تفنگ عقاب در اختیار توست. از دور شکارشان کن؛ ولی زمان محدود است. هدف‌ها با نشانگر زرد مشخص شده‌اند.»',
     briefEn: 'Major Kian: "Five enemy officers are scattered through the forest. You get the Eagle rifle. Hunt them from range — time is limited. Targets are marked in yellow."',
     type: 'snipe', obj: 'پنج افسر دشمن را حذف کن', objEn: 'Eliminate five enemy officers', count: 5,

@@ -15,7 +15,8 @@ const EModel = (() => {
       const images = {};
       const need = new Set(sk.prims.map((p) => p.mat.tex).filter((t) => t >= 0));
       await Promise.all([...need].map((t) => model.image(t).then((im) => { images[t] = im; })));
-      M.mesh = GE.skinCreate(sk, images);
+      M.images = images; M.texCache = {};
+      M.mesh = GE.skinCreate(sk, images, M.texCache);
       M.sk = sk;
       poseA = GLTF.newPose(sk.N); poseB = GLTF.newPose(sk.N); poseC = GLTF.newPose(sk.N);
       Gm = new Float32Array(sk.N * 16);
