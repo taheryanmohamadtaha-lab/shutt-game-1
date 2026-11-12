@@ -11,6 +11,7 @@ const ENVS = {
   forest: { skyTop: [0.08, 0.1, 0.14], skyHor: [0.22, 0.26, 0.3], fog: [0.15, 0.18, 0.2], fogD: 0.015, amb: [0.2, 0.25, 0.26], sunDir: norm3(0.2, 0.9, 0.1), sunCol: [0.25, 0.3, 0.38], sunDisc: [0, 0, 0], ground: [0.1, 0.18, 0.1], amb2: 'rain', rain: true, music: 'tense' },
   night: { skyTop: [0.01, 0.02, 0.06], skyHor: [0.04, 0.06, 0.1], fog: [0.03, 0.04, 0.07], fogD: 0.02, amb: [0.1, 0.12, 0.2], sunDir: norm3(-0.3, 0.7, 0.4), sunCol: [0.15, 0.2, 0.35], sunDisc: [0.4, 0.45, 0.6], stars: true, ground: [0.14, 0.14, 0.16], amb2: 'wind', nv: true, music: 'tense' },
   under: { skyTop: [0.02, 0.02, 0.03], skyHor: [0.03, 0.03, 0.04], fog: [0.03, 0.03, 0.04], fogD: 0.02, amb: [0.16, 0.16, 0.2], sunDir: norm3(0, 1, 0), sunCol: [0.05, 0.05, 0.06], sunDisc: [0, 0, 0], ground: [0.2, 0.2, 0.22], amb2: 'hum', music: 'tense', indoor: true },
+  valley: { skyTop: [0.28, 0.5, 0.82], skyHor: [0.78, 0.86, 0.9], fog: [0.66, 0.76, 0.8], fogD: 0.0105, amb: [0.58, 0.62, 0.62], sunDir: norm3(0.45, 0.78, 0.3), sunCol: [0.95, 0.88, 0.7], sunDisc: [1, 0.9, 0.7], ground: [0.3, 0.45, 0.25], amb2: 'wind', music: 'tense' },
   snow: { skyTop: [0.45, 0.55, 0.7], skyHor: [0.85, 0.88, 0.92], fog: [0.8, 0.84, 0.9], fogD: 0.015, amb: [0.65, 0.68, 0.75], sunDir: norm3(0.3, 0.55, 0.5), sunCol: [0.85, 0.85, 0.85], sunDisc: [1, 1, 1], ground: [0.88, 0.9, 0.95], amb2: 'snow', snow: true, music: 'combat' },
 };
 
@@ -52,6 +53,16 @@ function buildM1() {
   L.enemy('soldier', 0, -16, { patrol: true });
   L.enemy('soldier', -8, -18, { patrol: true });
   L.pickup('health', -2, 20); L.pickup('ammo', 3, 18); L.pickup('ammo', -12, -2); L.pickup('health', 14, -9);
+  return L;
+}
+
+/* ======================== مرحله ۱ (نسخهٔ دره جنگلی با مدل GLB) ======================== */
+function buildM1Valley() {
+  if (!Forest.ready) return buildM1();
+  const L = Forest.build();
+  L.start = { x: -1.5, z: 25, yaw: 0 };
+  for (const [x, z] of [[-3, 12], [5, 6], [-9, 1], [8, -5], [0, -9], [-6, 18]]) L.enemy('soldier', x, z, { patrol: true });
+  L.pickup('health', -3, 21); L.pickup('ammo', 3, 20); L.pickup('ammo', -10, 6); L.pickup('health', 9, 0);
   return L;
 }
 
@@ -297,9 +308,9 @@ function buildM8() {
 
 const MISSIONS = [
   {
-    id: 1, build: buildM1, fa: 'عملیات شروع', en: 'Operation Start', area: 'پایگاه کوهستانی', areaEn: 'Mountain Base',
-    brief: 'سرگرد کیان: «سایه، این اولین عملیات توست. گروهی به نام «کلاه‌سیاه» پایگاه کوهستانی را اشغال کرده‌اند. وارد شو، با کنترل‌ها آشنا شو و همهٔ نیروهای دشمن را پاک‌سازی کن.»',
-    briefEn: 'Major Kian: "Shadow, this is your first op. The Blackcap group holds the mountain base. Get in, learn the controls and clear every hostile."',
+    id: 1, build: buildM1Valley, fa: 'عملیات شروع', en: 'Operation Start', area: 'دره جنگلی', areaEn: 'Forest Valley',
+    brief: 'سرگرد کیان: «سایه، این اولین عملیات توست. گروهی به نام «کلاه‌سیاه» دره جنگلی را اشغال کرده‌اند. وارد شو، با کنترل‌ها آشنا شو و همهٔ نیروهای دشمن را پاک‌سازی کن.»',
+    briefEn: 'Major Kian: "Shadow, this is your first op. The Blackcap group holds the forest valley. Get in, learn the controls and clear every hostile."',
     type: 'kill', obj: 'همهٔ نیروهای دشمن را نابود کن', objEn: 'Eliminate all hostiles',
     par: 150, reward: 400, xp: 120, bonus: { type: 'headshots', n: 3, fa: 'سه ضربهٔ سر بزن', en: 'Land 3 headshots' }, music: 'menu',
   },

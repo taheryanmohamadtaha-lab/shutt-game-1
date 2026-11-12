@@ -44,3 +44,5 @@ body.scoped #scope { display: block; } body.scoped #ammoBox { opacity: .7; }
 #reloadBar { position: absolute; left: 50%; top: 58%; width: 120px; height: 5px; margin-left: -60px; background: rgba(0, 0, 0, .5); border-radius: 3px; overflow: hidden; display: none; } #reloadBar.on { display: block; } #reloadFill { display: block; height: 100%; background: var(--acc2); }
 body.nv #nvOverlay { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, .6) 100%), repeating-linear-gradient(0deg, rgba(0, 0, 0, .12) 0 1px, transparent 1px 3px); }
 body.nv #hud { color: #7dff7d; }
+#crosshair.lock i { background: #ff3b3b; opacity: 1; }
+#crosshair.lock u { background: #ff3b3b; width: 4px; height: 4px; left: -2px; top: -2px; border-radius: 50%; }

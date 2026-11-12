@@ -68,9 +68,10 @@ class Enemy {
     this.x = sp.x; this.z = sp.z; this.y = sp.y || 0;
     if (!sp.y) {
       const L = G.L;
-      if (L.blocked(this.x, this.z, 0.4, 0, 1.7)) {
+      if (L.terrain) this.y = L.groundAt(this.x, this.z, 0.3, 99);
+      if (L.blocked(this.x, this.z, 0.4, this.y, 1.7)) {
         const f = L.nearestFree(this.x, this.z);
-        if (f) { this.x = L.cc(f[0]); this.z = L.cc(f[1]); }
+        if (f) { this.x = L.cc(f[0]); this.z = L.cc(f[1]); if (L.terrain) this.y = L.groundAt(this.x, this.z, 0.3, 99); }
       }
     }
     this.home = { x: this.x, z: this.z };
@@ -128,6 +129,7 @@ class Enemy {
       const ex = this.x - o.x, ez = this.z - o.z, dd = ex * ex + ez * ez;
       if (dd < 0.9 && dd > 0.0001) { const k = (0.95 - Math.sqrt(dd)) * 1.2 * dt * 3; L.move(this, ex * k, ez * k, 0.38, this.y, 1.7); }
     }
+    if (L.terrain) this.y = L.groundAt(this.x, this.z, 0.3, this.y + 1);
     const moved = Math.hypot(this.x - ox, this.z - oz);
     this.legPhase += moved * 3.4;
     return moved;
@@ -380,35 +382,38 @@ class Enemy {
       const wx = self.x + lx * cy + z2 * sy, wz = self.z - lx * sy + z2 * cy;
       batch.box(wx, self.y + y2 + (fa ? 0.12 : 0), wz, sx * s, sy2 * s, sz * s, self.yaw, (rx || 0) + fa, mix(col), fade, mat || 0, 0);
     };
-    const sw = this.dead ? 0 : Math.sin(this.legPhase) * 0.7 * (this.crouched ? 0.2 : 1);
-    const lw = d.bulky ? 0.22 : 0.18;
-    // پاها (محور چرخش: لگن)
-    const hip = 0.86 - crouchD * 0.5;
-    for (const sgn of [-1, 1]) {
-      const a = sw * sgn;
-      const ly = hip - 0.4 * Math.cos(a) * (1 - crouchD * 0.3), lz = -0.4 * Math.sin(a);
-      P_(sgn * 0.12, ly, lz, lw, 0.82, 0.22, d.vest, a);
+    if (EModel.ready) EModel.draw(this, batch, fade);
+    else {
+      const sw = this.dead ? 0 : Math.sin(this.legPhase) * 0.7 * (this.crouched ? 0.2 : 1);
+      const lw = d.bulky ? 0.22 : 0.18;
+      // پاها (محور چرخش: لگن)
+      const hip = 0.86 - crouchD * 0.5;
+      for (const sgn of [-1, 1]) {
+        const a = sw * sgn;
+        const ly = hip - 0.4 * Math.cos(a) * (1 - crouchD * 0.3), lz = -0.4 * Math.sin(a);
+        P_(sgn * 0.12, ly, lz, lw, 0.82, 0.22, d.vest, a);
+      }
+      // تنه
+      const tw = d.bulky ? 0.6 : 0.5;
+      P_(0, 1.16, 0, tw, 0.62, 0.3, d.col);
+      P_(0, 1.2, -0.02, tw + 0.04, 0.48, 0.34, d.vest);
+      if (d.boss) P_(0, 1.2, -0.18, 0.18, 0.18, 0.04, [1, 0.15, 0.1], 0, 2);
+      if (d.orange) P_(0, 1.0, -0.17, 0.4, 0.1, 0.03, [0.95, 0.5, 0.1], 0, 2);
+      // سر
+      P_(0, 1.63, 0, 0.25, 0.26, 0.25, d.skin);
+      P_(0, 1.74, 0.0, 0.29, 0.13, 0.3, d.helm);
+      if (d.band) P_(0, 1.68, -0.01, 0.27, 0.05, 0.27, [0.85, 0.1, 0.1]);
+      if (d.bulky || d.longGun) P_(0, 1.63, -0.13, 0.22, 0.08, 0.03, [0.05, 0.05, 0.07], 0, d.boss ? 2 : 0);
+      if (d.gold) P_(0, 1.5, -0.17, 0.1, 0.06, 0.03, [0.9, 0.7, 0.15], 0, 2);
+      // دست‌ها و سلاح
+      const gl = d.longGun ? 0.95 : (d.type === 'heavy' || d.boss ? 0.8 : 0.62);
+      P_(0.2, 1.2, -0.22, 0.11, 0.11, 0.5, d.col);
+      P_(-0.18, 1.22, -0.34, 0.11, 0.11, 0.5, d.col);
+      P_(0.12, 1.22, -0.35 - gl / 2 + 0.2, 0.08, 0.1, gl, [0.08, 0.08, 0.09]);
+      if (d.boss || d.type === 'heavy') P_(0.12, 1.12, -0.42, 0.09, 0.14, 0.2, [0.12, 0.12, 0.13]);
+      // جرقهٔ دهانه
+      if (!this.dead && this.flashT > 0) P_(0.12, 1.22, -0.35 - gl - 0.1, 0.16, 0.16, 0.2, [1, 0.85, 0.4], 0, 2);
     }
-    // تنه
-    const tw = d.bulky ? 0.6 : 0.5;
-    P_(0, 1.16, 0, tw, 0.62, 0.3, d.col);
-    P_(0, 1.2, -0.02, tw + 0.04, 0.48, 0.34, d.vest);
-    if (d.boss) P_(0, 1.2, -0.18, 0.18, 0.18, 0.04, [1, 0.15, 0.1], 0, 2);
-    if (d.orange) P_(0, 1.0, -0.17, 0.4, 0.1, 0.03, [0.95, 0.5, 0.1], 0, 2);
-    // سر
-    P_(0, 1.63, 0, 0.25, 0.26, 0.25, d.skin);
-    P_(0, 1.74, 0.0, 0.29, 0.13, 0.3, d.helm);
-    if (d.band) P_(0, 1.68, -0.01, 0.27, 0.05, 0.27, [0.85, 0.1, 0.1]);
-    if (d.bulky || d.longGun) P_(0, 1.63, -0.13, 0.22, 0.08, 0.03, [0.05, 0.05, 0.07], 0, d.boss ? 2 : 0);
-    if (d.gold) P_(0, 1.5, -0.17, 0.1, 0.06, 0.03, [0.9, 0.7, 0.15], 0, 2);
-    // دست‌ها و سلاح
-    const gl = d.longGun ? 0.95 : (d.type === 'heavy' || d.boss ? 0.8 : 0.62);
-    P_(0.2, 1.2, -0.22, 0.11, 0.11, 0.5, d.col);
-    P_(-0.18, 1.22, -0.34, 0.11, 0.11, 0.5, d.col);
-    P_(0.12, 1.22, -0.35 - gl / 2 + 0.2, 0.08, 0.1, gl, [0.08, 0.08, 0.09]);
-    if (d.boss || d.type === 'heavy') P_(0.12, 1.12, -0.42, 0.09, 0.14, 0.2, [0.12, 0.12, 0.13]);
-    // جرقهٔ دهانه
-    if (!this.dead && this.flashT > 0) P_(0.12, 1.22, -0.35 - gl - 0.1, 0.16, 0.16, 0.2, [1, 0.85, 0.4], 0, 2);
     // لیزر تک‌تیرانداز
     if (!this.dead && d.aim && this.aim > 0.25 && this.canSee) {
       const my = this.y + 1.3 * s;
@@ -431,7 +436,7 @@ class Enemy {
   rayHit(ox, oy, oz, dx, dy, dz) {
     if (this.dead) return null;
     const s = this.size, y = this.y, cd = this.crouched ? 0.45 * s : 0;
-    const hw = 0.19 * s, bw = 0.36 * s;
+    const hw = 0.24 * s, bw = 0.44 * s;
     const th = rayAABB(ox, oy, oz, dx, dy, dz, this.x - hw, y + 1.5 * s - cd, this.z - hw, this.x + hw, y + 1.85 * s - cd, this.z + hw);
     const tb = rayAABB(ox, oy, oz, dx, dy, dz, this.x - bw, y, this.z - bw, this.x + bw, y + 1.5 * s - cd, this.z + bw);
     if (th >= 0 && (tb < 0 || th <= tb + 0.05)) return { t: th, head: true };

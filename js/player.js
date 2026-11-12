@@ -73,13 +73,23 @@ const P = {
     s.mag--; this.fireT = st.interval; this.flashT = 0.055; this.rz = Math.min(0.06, this.rz + 0.025);
     G.stats.shots++; G.noiseT = 1.3;
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
-    const fx = -Math.sin(this.yaw) * cp, fy = sp, fz = -Math.cos(this.yaw) * cp;
-    const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
-    const ux = -Math.sin(this.yaw) * (-sp), uy = cp, uz = -Math.cos(this.yaw) * (-sp);
+    const fx0 = -Math.sin(this.yaw) * cp, fy0 = sp, fz0 = -Math.cos(this.yaw) * cp;
+    const rx0 = Math.cos(this.yaw), rz0 = -Math.sin(this.yaw);
+    const ux0 = -Math.sin(this.yaw) * (-sp), uy0 = cp, uz0 = -Math.cos(this.yaw) * (-sp);
     const ox = this.x, oy = this.eyeY(), oz = this.z;
     const moving = Math.min(1, this.speed / 4);
     let spread = st.spread * (1 + this.bloom) * (1 + moving * 0.6) * (1 - this.ads * 0.55) * (1 - this.crouch * 0.25) * (this.onGround ? 1 : 2.2);
     if (w.scoped && this.ads < 0.8) spread *= 6;
+    /* مغناطیس گلوله: اگر نشانه نزدیک بدن دشمن است، مسیر به‌سمت مرکز بدنش کشیده می‌شود */
+    let fx = fx0, fy = fy0, fz = fz0, rx = rx0, rz = rz0, ux = ux0, uy = uy0, uz = uz0;
+    const lvl = this.assistLevel(), A = this.assist;
+    if (lvl && A && A.ang < A.rad * [0, 1.6, 2.4, 3.2][lvl] + [0, 0.012, 0.02, 0.03][lvl]) {
+      const b = [0, 0.6, 0.8, 0.92][lvl];
+      let sx = fx0 + (A.dx - fx0) * b, sy = fy0 + (A.dy - fy0) * b, sz = fz0 + (A.dz - fz0) * b;
+      const sl = Math.hypot(sx, sy, sz); fx = sx / sl; fy = sy / sl; fz = sz / sl;
+      const rl = Math.hypot(fz, fx) || 1; rx = -fz / rl; rz = fx / rl;   // right = f × up
+      ux = -(fy * fx) / rl; uy = rl; uz = -(fy * fz) / rl;
+    }
     const mx = ox + fx * 0.8 + rx * 0.14 * (1 - this.ads) - ux * 0.1 * (1 - this.ads);
     const my = oy + fy * 0.8 - 0.1 * (1 - this.ads), mz = oz + fz * 0.8 + rz * 0.14 * (1 - this.ads) - uz * 0.1 * (1 - this.ads);
     let anyHit = false, anyHead = false, anyKill = false;
@@ -146,8 +156,19 @@ const P = {
     const zoom = 1 + this.ads * (w.zoom - 1);
     const sens = 0.0042 * Store.d.settings.sens / Math.pow(zoom, 0.85);
     let k = sens;
-    if (Store.d.settings.aimAssist && this.aimAssistActive()) k *= 0.62;
+    /* کمک نشانه‌گیری: اصطکاک + مغناطیس به‌سمت دشمن */
+    const lv = this.assistLevel();
+    const T = this.assist = lv ? this.findAssist(lv) : null;
+    this.onTarget = !!(T && T.ang < T.rad * 1.15);
+    const wantsFire = Ctl.fire || this.autoFiring;
+    if (T) k *= [1, 0.72, 0.55, 0.42][lv];
     this.yaw -= look.x * k; this.pitch -= look.y * k;
+    if (T && (wantsFire || this.ads > 0.15 || lv >= 3 && T.ang < T.rad * 2.5)) {
+      const act = Math.min(1, Math.hypot(look.x, look.y) / 22);          // اگر بازیکن خودش می‌چرخد کمتر بکش
+      const rate = [0, 3.5, 7, 12][lv] * (1 - 0.75 * act) * (wantsFire ? 1 : 0.55);
+      const f = Math.min(1, rate * dt);
+      this.yaw += T.dyaw * f; this.pitch += T.dpitch * f;
+    }
     this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch));
     // بازیابی لگد
     if (this.rk > 0) { const rec = Math.min(this.rk, this.rk * 4 * dt + 0.02 * dt); this.rk -= rec; this.pitch -= rec * 0.55; }
@@ -235,30 +256,50 @@ const P = {
     }
 
     /* شلیک */
-    const wantFire = Ctl.fire && !this.sprinting && this.switchT <= 0;
+    this.autoFiring = !!(Store.d.settings.autoFire && this.onTarget && !(w.scoped && this.ads < 0.8) && this.assist && this.assist.dist < w.range * 0.9);
+    const fireIn = Ctl.fire || this.autoFiring;
+    const wantFire = fireIn && !this.sprinting && this.switchT <= 0;
     if (wantFire && this.fireT <= 0 && (!this.reloading || (w.shellReload && s.mag > 0))) {
       if (w.auto || !this.prevFire) { this.reloading = false; this.fireWeapon(); }
     }
-    this.prevFire = Ctl.fire;
-    if (Ctl.fire) this.sprinting = false;
+    this.prevFire = fireIn;
+    if (fireIn) this.sprinting = false;
 
     /* ترمیم آهسته */
     this.regenT -= dt;
     if (this.regenT <= 0 && this.hp < 50) this.hp = Math.min(50, this.hp + 3 * dt);
   },
 
-  aimAssistActive() {
+  assistLevel() {
+    const v = Store.d.settings.aimAssist;
+    return v === true ? 3 : v === 'low' ? 1 : v === 'med' ? 2 : v === 'high' ? 3 : 0;
+  },
+  /* بهترین دشمن در مخروط نشانه‌گیری؛ نتیجه شامل زاویه تا مرکز بدن و جهت لازم برای چرخش */
+  findAssist(lv) {
     const cp = Math.cos(this.pitch);
     const fx = -Math.sin(this.yaw) * cp, fz = -Math.cos(this.yaw) * cp, fy = Math.sin(this.pitch);
-    const ex = this.x, ey = this.eyeY(), ez = this.z;
+    const ex = this.x, ey = this.eyeY(), ez = this.z, L = G.L;
+    const cone = [0, 0.09, 0.16, 0.24][lv];
+    let best = null, bestScore = 1e9;
+    const R = this._as || (this._as = { e: null, ang: 0, rad: 0, dx: 0, dy: 0, dz: 0, dyaw: 0, dpitch: 0, dist: 0 });
     for (const e of G.enemies) {
       if (e.dead) continue;
-      const dx = e.x - ex, dy = e.y + 1.2 - ey, dz = e.z - ez;
-      const d = Math.hypot(dx, dy, dz); if (d > 70 || d < 1) continue;
+      const ty = e.y + (e.crouched ? 0.95 : 1.28) * e.size;
+      const dx = e.x - ex, dy = ty - ey, dz = e.z - ez;
+      const d = Math.hypot(dx, dy, dz); if (d > 90 || d < 0.8) continue;
       const dot = (dx * fx + dy * fy + dz * fz) / d;
-      if (dot > 0.9975) return true;
+      if (dot < 0.9) continue;
+      const ang = Math.acos(Math.min(1, dot));
+      const rad = Math.atan(0.42 * e.size / d);          // اندازهٔ ظاهری دشمن
+      if (ang > cone + rad) continue;
+      if (ang < bestScore && L.los(ex, ey, ez, e.x, ty, e.z)) {
+        bestScore = ang; best = e;
+        R.e = e; R.ang = ang; R.rad = rad; R.dx = dx / d; R.dy = dy / d; R.dz = dz / d; R.dist = d;
+        R.dyaw = angDiff(Math.atan2(-dx, -dz), this.yaw);
+        R.dpitch = Math.asin(Math.max(-1, Math.min(1, dy / d))) - this.pitch;
+      }
     }
-    return false;
+    return best ? R : null;
   },
 
   camera() {

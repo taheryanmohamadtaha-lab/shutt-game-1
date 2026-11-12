@@ -70,7 +70,7 @@ const FX = (() => {
         const dr = Math.max(0, 1 - p.drag * dt);
         p.vx *= dr; p.vz *= dr; p.vy = (p.vy - p.grav * dt) * (p.drag && p.grav <= 0 ? dr : 1);
         p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
-        if (p.grav > 0 && p.y < 0.03) { p.y = 0.03; p.vy = 0; p.vx *= 0.5; p.vz *= 0.5; }
+        if (p.grav > 0 && p.y < (G && G.L && G.L.terrain ? G.L.terrain.h(p.x, p.z) : 0) + 0.03) { p.y = (G && G.L && G.L.terrain ? G.L.terrain.h(p.x, p.z) : 0) + 0.03; p.vy = 0; p.vx *= 0.5; p.vz *= 0.5; }
       }
       for (let i = tracers.length - 1; i >= 0; i--) { tracers[i].life -= dt; if (tracers[i].life <= 0) tracers.splice(i, 1); }
       for (let i = lights.length - 1; i >= 0; i--) { lights[i].life -= dt; if (lights[i].life <= 0) lights.splice(i, 1); }

@@ -34,7 +34,7 @@ const Store = (() => {
       settings: {
         quality: 'medium', shadows: 'soft', sens: 1.0, fov: 75,
         music: 0.5, sfx: 0.8, vibrate: true, lang: 'fa',
-        btnScale: 1, layout: {}, aimAssist: true,
+        btnScale: 1, layout: {}, aimAssist: 'high', autoFire: false,
       },
     };
   }

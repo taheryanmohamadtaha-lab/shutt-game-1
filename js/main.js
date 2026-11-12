@@ -259,7 +259,7 @@ function updateHostages(dt) {
 function updatePickups(dt) {
   for (let i = G.pickups.length - 1; i >= 0; i--) {
     const p = G.pickups[i]; p.t += dt;
-    if (Math.hypot(P.x - p.x, P.z - p.z) < 1.5 && Math.abs(P.y - 0) < 2.5) {
+    if (Math.hypot(P.x - p.x, P.z - p.z) < 1.5 && Math.abs(P.y - (G.L.terrain ? G.L.terrain.h(p.x, p.z) : 0)) < 2.5) {
       if (p.kind === 'health') { if (P.hp >= P.maxHp) continue; P.heal(45); UI.radio(t('+ سلامتی', '+ Health'), '', 1200); }
       else { P.addAmmo(0.5); if (P.grenades < P.maxGrenades) P.grenades++; UI.radio(t('+ مهمات', '+ Ammo'), '', 1200); }
       Snd.pickup(); G.pickups.splice(i, 1);
@@ -354,7 +354,7 @@ function drawWorld(cam) {
   }
   // پیک‌آپ‌ها
   for (const p of G.pickups) {
-    const y = 0.55 + Math.sin(p.t * 2.5) * 0.08;
+    const y = (G.L.terrain ? G.L.terrain.h(p.x, p.z) : 0) + 0.55 + Math.sin(p.t * 2.5) * 0.08;
     if (p.kind === 'health') {
       dynB.box(p.x, y, p.z, 0.46, 0.34, 0.34, p.t, 0, [0.92, 0.92, 0.92], 1, 0, 0);
       dynB.box(p.x, y, p.z, 0.2, 0.36, 0.36, p.t, 0, [0.9, 0.1, 0.1], 1, 2, 0);
@@ -446,6 +446,8 @@ function boot() {
   applySettings();
   setupMenu();
   UI.show('splash');
+  EModel.load('assets/models/heavy.glb');
+  Forest.load('assets/models/forest.glb');
   window.addEventListener('resize', () => { GE.resize(QUALITY[Store.d.settings.quality] || 0.78); });
   window.addEventListener('orientationchange', () => setTimeout(() => GE.resize(QUALITY[Store.d.settings.quality] || 0.78), 200));
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (G && G.state === 'play') pauseGame(); Store.save(); } });

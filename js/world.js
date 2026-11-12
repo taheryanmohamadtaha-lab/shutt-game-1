@@ -42,7 +42,7 @@ class Level {
       mat: opt.mat === undefined ? 1 : opt.mat,
       solid: opt.solid !== false, opaque: opt.opaque !== false,
       kind: opt.kind || 'wall', hp: opt.hp || 0, maxHp: opt.hp || 0,
-      ao: opt.ao === undefined ? 0.3 : opt.ao, dead: false,
+      ao: opt.ao === undefined ? 0.3 : opt.ao, dead: false, hidden: !!opt.hidden,
     };
     this.boxes.push(b); this.dirty = true;
     return b;
@@ -216,9 +216,10 @@ class Level {
   rebuild() {
     const bt = this.batch; bt.clear();
     for (const b of this.boxes) {
-      if (b.dead) continue;
+      if (b.dead || b.hidden) continue;
       bt.box((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2, b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0, 0, 0, b.col, 1, b.mat, b.y0 < 0.2 ? b.ao : 0);
     }
+    if (this.deco && this.deco.n) { bt.f.set(this.deco.f.subarray(0, this.deco.n * GE.FLOATS), bt.n * GE.FLOATS); bt.n += this.deco.n; }
     this.dirty = false;
     GE.setStatic(bt);
   }
@@ -234,6 +235,7 @@ class Level {
   blocked(x, z, r, y, h) {
     const hh = this.half - 0.6;
     if (x < -hh || x > hh || z < -hh || z > hh) return true;
+    if (this.terrain && this.terrain.h(x, z) > y + 1.5) return true;
     const bs = this.boxes;
     for (let i = 0; i < bs.length; i++) {
       const b = bs[i];
@@ -246,11 +248,21 @@ class Level {
   }
   /* حرکت لغزان دایره؛ pos:{x,z} */
   move(pos, dx, dz, r, y, h) {
+    const T = this.terrain;
+    if (T) {
+      const h0 = T.h(pos.x, pos.z);
+      /* شیب بیش از ~۴۸ درجه قابل صعود نیست */
+      const ok = (nx, nz, d) => { const h1 = T.h(nx, nz); return h1 <= h0 + 1.1 * d + 0.02 || h1 <= y + 0.05; };
+      if (dx !== 0 && ok(pos.x + dx, pos.z, Math.abs(dx)) && !this.blocked(pos.x + dx, pos.z, r, y, h)) pos.x += dx;
+      if (dz !== 0 && ok(pos.x, pos.z + dz, Math.abs(dz)) && !this.blocked(pos.x, pos.z + dz, r, y, h)) pos.z += dz;
+      return;
+    }
     if (dx !== 0 && !this.blocked(pos.x + dx, pos.z, r, y, h)) pos.x += dx;
     if (dz !== 0 && !this.blocked(pos.x, pos.z + dz, r, y, h)) pos.z += dz;
   }
   groundAt(x, z, r, y) {
     let best = 0;
+    if (this.terrain) { const th = this.terrain.h(x, z); if (th <= y + 0.55) best = th; }
     const bs = this.boxes;
     for (let i = 0; i < bs.length; i++) {
       const b = bs[i];
@@ -298,8 +310,23 @@ class Level {
       if (tmin <= 0.0001) continue; // شروع داخل جعبه نادیده گرفته می‌شود
       bestT = t; bestB = b; bn = face;
     }
-    // زمین
-    if (mode !== 'opaque' && dy < -1e-6) {
+    // زمین (نقشهٔ ارتفاع)
+    if (this.terrain) {
+      const T = this.terrain;
+      if (oy > T.h(ox, oz) - 0.2) {
+        const lim = Math.min(bestT, maxT);
+        for (let t = 0.6; t < lim + 0.6; t += 0.6) {
+          const tt = Math.min(t, lim);
+          if (oy + dy * tt < T.h(ox + dx * tt, oz + dz * tt)) {
+            let a = Math.max(0, tt - 0.6), b = tt;
+            for (let k = 0; k < 6; k++) { const m = (a + b) / 2; if (oy + dy * m < T.h(ox + dx * m, oz + dz * m)) b = m; else a = m; }
+            if (b < bestT) { bestT = b; bestB = null; bn = 3; }
+            break;
+          }
+          if (tt >= lim) break;
+        }
+      }
+    } else if (mode !== 'opaque' && dy < -1e-6) {
       const t = -oy / dy;
       if (t > 0.0001 && t < bestT) { bestT = t; bestB = null; bn = 3; }
     }
@@ -329,6 +356,14 @@ class Level {
       const i0 = Math.max(0, Math.floor((b.x0 - m + this.half) / this.cell)), i1 = Math.min(n - 1, Math.floor((b.x1 + m + this.half) / this.cell));
       const j0 = Math.max(0, Math.floor((b.z0 - m + this.half) / this.cell)), j1 = Math.min(n - 1, Math.floor((b.z1 + m + this.half) / this.cell));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) g[j * n + i] = 1;
+    }
+    if (this.terrain) {
+      const T = this.terrain;
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        const x = this.cc(i), z = this.cc(j), h0 = T.h(x, z);
+        const sl = Math.hypot(T.h(x + 0.75, z) - T.h(x - 0.75, z), T.h(x, z + 0.75) - T.h(x, z - 0.75)) / 1.5;
+        if (h0 > 4.2 || sl > 0.85) g[j * n + i] = 1;
+      }
     }
     // لبه‌ها مسدود
     for (let i = 0; i < n; i++) { g[i] = 1; g[(n - 1) * n + i] = 1; g[i * n] = 1; g[i * n + n - 1] = 1; }

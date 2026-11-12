@@ -55,6 +55,14 @@ const GE = (() => {
       this.n = 0;
     }
     clear() { this.n = 0; }
+    /* یک رأس خام (برای مدل‌های GLB) */
+    vert(x, y, z, nx, ny, nz, r, g, b, a, mat) {
+      if (this.n >= this.max) return;
+      const f = this.f; const o = this.n * FLOATS;
+      f[o] = x; f[o + 1] = y; f[o + 2] = z; f[o + 3] = nx; f[o + 4] = ny; f[o + 5] = nz;
+      f[o + 6] = r; f[o + 7] = g; f[o + 8] = b; f[o + 9] = a; f[o + 10] = mat;
+      this.n++;
+    }
     /* جعبه مرکزدار با چرخش rx (حول X) و سپس ry (حول Y). ao>0 → تیره‌سازی پایین */
     box(cx, cy, cz, sx, sy, sz, ry, rx, col, a, mat, ao) {
       if (this.n + 36 > this.max) return;
@@ -181,6 +189,137 @@ void main(){
   gl_FragColor = vec4(c, 1.0);
 }`;
 
+
+  /* ---------- رندر اسکلتی (GPU skinning) ---------- */
+  const skinQueue = [];
+  function skinVS(nb) {
+    return `
+attribute vec3 aPos; attribute vec3 aNor; attribute vec2 aUV; attribute vec4 aJ; attribute vec4 aW;
+uniform mat4 uVP; uniform vec4 uB[${nb * 3}];
+varying vec3 vW; varying vec3 vN; varying vec2 vUV;
+void main(){
+  vec4 p = vec4(aPos, 1.0);
+  vec3 wp = vec3(0.0); vec3 wn = vec3(0.0);
+  for (int i = 0; i < 4; i++) {
+    float w = aW[i];
+    if (w > 0.0) {
+      int j = int(aJ[i] + 0.5) * 3;
+      vec4 r0 = uB[j]; vec4 r1 = uB[j + 1]; vec4 r2 = uB[j + 2];
+      wp += w * vec3(dot(r0, p), dot(r1, p), dot(r2, p));
+      wn += w * vec3(dot(r0.xyz, aNor), dot(r1.xyz, aNor), dot(r2.xyz, aNor));
+    }
+  }
+  vW = wp; vN = wn; vUV = aUV;
+  gl_Position = uVP * vec4(wp, 1.0);
+}`;
+  }
+  const SKIN_FS = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec3 vW; varying vec3 vN; varying vec2 vUV;
+uniform vec3 uCam; uniform vec3 uFogCol; uniform float uFogD;
+uniform vec3 uAmb; uniform vec3 uSunDir; uniform vec3 uSunCol;
+uniform vec4 uLP[4]; uniform vec3 uLC[4];
+uniform sampler2D uBase; uniform vec4 uColor; uniform vec3 uTint; uniform float uFlash; uniform float uAlpha;
+uniform float uNV; uniform float uTime;
+void main(){
+  vec3 n = normalize(vN);
+  vec4 tx = texture2D(uBase, vUV);
+  vec3 col = tx.rgb * uColor.rgb * uTint;
+  float hemi = 0.55 + 0.45 * n.y;
+  vec3 light = uAmb * hemi * 1.15 + uSunCol * max(dot(n, uSunDir), 0.0);
+  for (int i = 0; i < 4; i++) {
+    vec3 d = uLP[i].xyz - vW;
+    float dist = max(length(d), 0.001);
+    float att = clamp(1.0 - dist / max(uLP[i].w, 0.01), 0.0, 1.0);
+    att *= att;
+    light += uLC[i] * att * (0.25 + 0.75 * max(dot(n, d / dist), 0.0));
+  }
+  vec3 c = col * light + vec3(uFlash);
+  float dist = length(vW - uCam);
+  float f = 1.0 - exp(-(dist * uFogD) * (dist * uFogD));
+  c = mix(c, uFogCol, clamp(f, 0.0, 1.0));
+  if (uNV > 0.5) {
+    float l = dot(c, vec3(0.33, 0.5, 0.17)) * 2.4 + 0.12;
+    float nz = fract(sin(dot(gl_FragCoord.xy + uTime, vec2(12.9898, 78.233))) * 43758.5453);
+    c = vec3(0.1, 1.0, 0.25) * (l + (nz - 0.5) * 0.12);
+  }
+  gl_FragColor = vec4(c, uAlpha * tx.a * uColor.a);
+}`;
+
+  function isPOT(v) { return (v & (v - 1)) === 0; }
+  function texFromImage(img) {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    const pot = isPOT(img.width) && isPOT(img.height);
+    if (pot) { gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT); }
+    else { gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    return t;
+  }
+  /* sk: خروجی buildSkinned؛ images: {texIndex: HTMLImageElement}. در صورت نبود پشتیبانی خطا می‌دهد */
+  function skinCreate(sk, images) {
+    const maxU = gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS);
+    if (sk.nUsed * 3 + 8 > maxU) throw new Error('skin: not enough vertex uniforms (' + maxU + ')');
+    const p = link(skinVS(sk.nUsed), SKIN_FS, ['aPos', 'aNor', 'aUV', 'aJ', 'aW']);
+    const U2 = uniforms(p, ['uVP', 'uB', 'uCam', 'uFogCol', 'uFogD', 'uAmb', 'uSunDir', 'uSunCol', 'uLP', 'uLC', 'uBase', 'uColor', 'uTint', 'uFlash', 'uAlpha', 'uNV', 'uTime']);
+    const white = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, white);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    const texCache = {};
+    const parts = sk.prims.map((pr) => {
+      const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, pr.verts, gl.STATIC_DRAW);
+      const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, pr.idx instanceof Uint16Array ? pr.idx : new Uint16Array(pr.idx), gl.STATIC_DRAW);
+      let tx = white;
+      if (pr.mat.tex >= 0 && images[pr.mat.tex]) tx = texCache[pr.mat.tex] || (texCache[pr.mat.tex] = texFromImage(images[pr.mat.tex]));
+      return { vb, ib, count: pr.idx.length, tex: tx, color: pr.mat.color, double: pr.mat.double };
+    });
+    return { prog: p, U: U2, parts, nb: sk.nUsed };
+  }
+  function drawSkins(q, lights, nv, time) {
+    if (!q.length) return;
+    let cur = null;
+    for (const it of q) {
+      const m = it.mesh;
+      if (cur !== m) {
+        cur = m; const u = m.U;
+        gl.useProgram(m.prog);
+        gl.uniformMatrix4fv(u.uVP, false, vp);
+        gl.uniform3f(u.uCam, lastCam.x, lastCam.y, lastCam.z);
+        gl.uniform3fv(u.uFogCol, env.fog); gl.uniform1f(u.uFogD, env.fogD);
+        gl.uniform3fv(u.uAmb, env.amb); gl.uniform3fv(u.uSunDir, env.sunDir); gl.uniform3fv(u.uSunCol, env.sunCol);
+        gl.uniform1f(u.uNV, nv ? 1 : 0); gl.uniform1f(u.uTime, time);
+        gl.uniform4fv(u.uLP, lpArr); gl.uniform3fv(u.uLC, lcArr);
+        gl.uniform1i(u.uBase, 0); gl.activeTexture(gl.TEXTURE0);
+      }
+      const u = m.U;
+      gl.uniform4fv(u.uB, it.bones);
+      gl.uniform3f(u.uTint, it.tint[0], it.tint[1], it.tint[2]);
+      gl.uniform1f(u.uFlash, it.flash || 0); gl.uniform1f(u.uAlpha, it.alpha === undefined ? 1 : it.alpha);
+      for (const pt of m.parts) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, pt.vb); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pt.ib);
+        for (let a = 0; a < 5; a++) gl.enableVertexAttribArray(a);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 64, 0); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 64, 12);
+        gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 64, 24); gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 64, 32); gl.vertexAttribPointer(4, 4, gl.FLOAT, false, 64, 48);
+        gl.bindTexture(gl.TEXTURE_2D, pt.tex);
+        gl.uniform4f(u.uColor, pt.color[0], pt.color[1], pt.color[2], pt.color[3]);
+        if (pt.double) gl.disable(gl.CULL_FACE); else gl.enable(gl.CULL_FACE);
+        gl.drawElements(gl.TRIANGLES, pt.count, gl.UNSIGNED_SHORT, 0);
+      }
+    }
+    gl.enable(gl.CULL_FACE);
+    gl.disableVertexAttribArray(4);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    gl.useProgram(prog);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+  }
+
   /* ---------- وضعیت ---------- */
   let canvas = null, gl = null;
   let prog = null, U = {}, skyProg = null, SU = {};
@@ -194,6 +333,7 @@ void main(){
   const lpArr = new Float32Array(16), lcArr = new Float32Array(12);
   let lost = false;
   let env = null;
+  let lastCam = { x: 0, y: 0, z: 0 };
   let t0 = performance.now();
 
   function compile(type, src) {
@@ -316,6 +456,7 @@ void main(){
   function render(cam, dyn, trans, vmBatch, vmTrans, lights, nv, zoomFov) {
     if (lost || !gl) return;
     const time = (performance.now() - t0) / 1000;
+    lastCam = cam;
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
     const fx = -Math.sin(cam.yaw) * cp, fy = sp, fz = -Math.cos(cam.yaw) * cp;
     const useFov = zoomFov || fov;
@@ -368,6 +509,7 @@ void main(){
       gl.drawArrays(gl.TRIANGLES, 0, staticCount);
     }
     drawDyn(bufDyn, dyn);
+    if (skinQueue.length) { drawSkins(skinQueue, lights, nv, time); skinQueue.length = 0; }
     if (trans && trans.n) {
       gl.depthMask(false);
       drawDyn(bufTrans, trans);
@@ -399,5 +541,5 @@ void main(){
     return true;
   }
 
-  return { init, resize, setStatic, setEnv, setFov, render, project, Batch, FLOATS, get gl() { return gl; }, get aspect() { return aspect; } };
+  return { skinQueue, skinCreate, init, resize, setStatic, setEnv, setFov, render, project, Batch, FLOATS, get gl() { return gl; }, get aspect() { return aspect; } };
 })();

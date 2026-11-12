@@ -249,7 +249,8 @@ const UI = {
       <div class="srow"><span>${t('صدای افکت‌ها', 'Effects volume')}</span>${rng('sfx', 0, 1, 0.05, s.sfx)}<b id="v-sfx">${Math.round(s.sfx * 100)}</b></div>
       <div class="srow"><span>${t('اندازهٔ دکمه‌ها', 'Button size')}</span>${rng('btnScale', 0.7, 1.4, 0.05, s.btnScale)}<b id="v-btnScale">${Math.round(s.btnScale * 100)}</b></div>
       <div class="srow"><span>${t('لرزش', 'Vibration')}</span><div class="segs">${opt('vibrate', true, t('روشن', 'On'))}${opt('vibrate', false, t('خاموش', 'Off'))}</div></div>
-      <div class="srow"><span>${t('کمک نشانه‌گیری', 'Aim assist')}</span><div class="segs">${opt('aimAssist', true, t('روشن', 'On'))}${opt('aimAssist', false, t('خاموش', 'Off'))}</div></div>
+      <div class="srow"><span>${t('کمک نشانه‌گیری', 'Aim assist')}</span><div class="segs">${(() => { const v = s.aimAssist === true ? 'high' : s.aimAssist; return ['off', 'low', 'med', 'high'].map((k, i) => `<button class="seg ${v === k || (k === 'off' && v === false) ? 'on' : ''}" data-act="set" data-key="aimAssist" data-val="${k}">${[t('خاموش', 'Off'), t('کم', 'Low'), t('متوسط', 'Medium'), t('زیاد', 'High')][i]}</button>`).join(''); })()}</div></div>
+      <div class="srow"><span>${t('شلیک خودکار روی دشمن', 'Auto-fire on target')}</span><div class="segs">${opt('autoFire', true, t('روشن', 'On'))}${opt('autoFire', false, t('خاموش', 'Off'))}</div></div>
       <div class="srow"><span>${t('دویدن خودکار با جوی‌استیک', 'Auto-sprint on stick')}</span><div class="segs">${opt('autoSprint', true, t('روشن', 'On'))}${opt('autoSprint', false, t('خاموش', 'Off'))}</div></div>
       <div class="srow"><button class="btn" data-act="editlayout">${t('تنظیم چیدمان دکمه‌ها', 'Edit button layout')}</button>
       <button class="btn danger" data-act="reset-ask">${t('پاک کردن پیشرفت', 'Reset progress')}</button></div></div>`;
@@ -449,6 +450,7 @@ const UI = {
     // جای نشانه
     const sp = (w.spread * 900 * (1 + P.bloom) * (1 - P.ads * 0.5)) + 6 + Math.min(18, P.speed * 1.5);
     if (Math.abs((this.last.sp || 0) - sp) > 0.8) { this.last.sp = sp; e.crosshair.style.setProperty('--sp', sp.toFixed(1) + 'px'); }
+    e.crosshair.classList.toggle('lock', !!P.onTarget);
     e.crosshair.style.opacity = (scoped || P.ads > 0.6 && w.type === 'sniper') ? 0 : 1;
     if (this.hudT > 0) return;
     this.hudT = 0.1;
