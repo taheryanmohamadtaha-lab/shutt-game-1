@@ -13,6 +13,7 @@ const ENVS = {
   night: { skyTop: [0.01, 0.02, 0.06], skyHor: [0.04, 0.06, 0.1], fog: [0.03, 0.04, 0.07], fogD: 0.02, amb: [0.1, 0.12, 0.2], sunDir: norm3(-0.3, 0.7, 0.4), sunCol: [0.15, 0.2, 0.35], sunDisc: [0.4, 0.45, 0.6], stars: true, ground: [0.14, 0.14, 0.16], amb2: 'wind', nv: true, music: 'tense' },
   under: { skyTop: [0.02, 0.02, 0.03], skyHor: [0.03, 0.03, 0.04], fog: [0.03, 0.03, 0.04], fogD: 0.02, amb: [0.16, 0.16, 0.2], sunDir: norm3(0, 1, 0), sunCol: [0.05, 0.05, 0.06], sunDisc: [0, 0, 0], ground: [0.2, 0.2, 0.22], amb2: 'hum', music: 'tense', indoor: true },
   valley: { skyTop: [0.28, 0.5, 0.82], skyHor: [0.78, 0.86, 0.9], fog: [0.66, 0.76, 0.8], fogD: 0.0105, amb: [0.58, 0.62, 0.62], sunDir: norm3(0.45, 0.78, 0.3), sunCol: [0.95, 0.88, 0.7], sunDisc: [1, 0.9, 0.7], ground: [0.3, 0.45, 0.25], amb2: 'wind', music: 'tense' },
+  grotto: { skyTop: [0.04, 0.06, 0.14], skyHor: [0.1, 0.14, 0.26], fog: [0.07, 0.1, 0.18], fogD: 0.012, amb: [0.34, 0.36, 0.5], sunDir: norm3(0.2, 0.9, 0.2), sunCol: [0.3, 0.34, 0.5], sunDisc: [0, 0, 0], ground: [0.2, 0.2, 0.26], amb2: 'hum', music: 'tense', stars: true },
   snow: { skyTop: [0.45, 0.55, 0.7], skyHor: [0.85, 0.88, 0.92], fog: [0.8, 0.84, 0.9], fogD: 0.015, amb: [0.65, 0.68, 0.75], sunDir: norm3(0.3, 0.55, 0.5), sunCol: [0.85, 0.85, 0.85], sunDisc: [1, 1, 1], ground: [0.88, 0.9, 0.95], amb2: 'snow', snow: true, music: 'combat' },
 };
 
@@ -358,6 +359,75 @@ function buildM8() {
   return L;
 }
 
+
+/* ======================== نقشه‌های GLB برای مأموریت‌های ۲، ۴، ۶، ۷ ======================== */
+const gy = (L, x, z) => (L.terrain ? L.terrain.h(x, z) : 0);
+function guardsAround(L, x, z, types, extra) {
+  const ring = [[x + 4.5, z], [x - 4.5, z], [x, z + 4.5], [x, z - 4.5], [x + 3.5, z + 3.5], [x - 3.5, z - 3.5]];
+  const g = pickSpots(L, types.length, 0, 0, ring);
+  types.forEach((t, i) => { const p = g[i]; if (p) L.enemy(t, p[0], p[1], Object.assign({ patrol: true }, extra || {})); });
+}
+function scatterEnemies(L, types, minStart, minBetween) {
+  const spots = pickSpots(L, types.length, minStart, minBetween, L.spawnSpots);
+  types.forEach((t, i) => { const p = spots[i]; if (p) L.enemy(t, p[0], p[1], t === 'sniper' ? { hold: true } : { patrol: true }); });
+  return spots;
+}
+function scatterPickups(L, n, minStart) {
+  const spots = pickSpots(L, n, minStart, 10, L.spawnSpots);
+  spots.forEach((p, i) => L.pickup(i % 2 ? 'ammo' : 'health', p[0], p[1]));
+  L.pickup('health', L.start.x - 2.5, L.start.z); L.pickup('ammo', L.start.x + 2.5, L.start.z);
+}
+
+function buildM2Ridge() {
+  if (!MapLib.ready('goldrush')) return buildM2();
+  const L = MapLib.build('goldrush', ENVS.desert, 202);
+  const gens = pickSpots(L, 3, 26, 24, L.spawnSpots);
+  for (const [x, z] of gens) { L.generator(x, z, null); guardsAround(L, x, z, ['soldier', 'soldier']); L.light(x, gy(L, x, z) + 4, z, 14, 1, 0.8, 0.4); }
+  scatterEnemies(L, ['soldier', 'soldier', 'soldier', 'soldier', 'rusher', 'rusher', 'armored', 'soldier', 'sniper', 'sniper'], 14, 9);
+  scatterPickups(L, 6, 10);
+  return L;
+}
+
+function buildM4Glacier() {
+  if (!MapLib.ready('glacier')) return buildM4();
+  const L = MapLib.build('glacier', ENVS.snow, 404);
+  L.extract = { x: L.start.x, z: L.start.z, r: 4.5 };
+  const hs = pickSpots(L, 3, 28, 24, L.spawnSpots);
+  hs.forEach(([x, z], i) => { L.hostage(x, z); guardsAround(L, x, z, i === 1 ? ['soldier', 'armored', 'soldier'] : ['soldier', 'soldier', 'armored']); });
+  scatterEnemies(L, ['soldier', 'soldier', 'rusher', 'soldier', 'sniper', 'soldier'], 16, 10);
+  scatterPickups(L, 6, 10);
+  return L;
+}
+
+function buildM6Planet() {
+  if (!MapLib.ready('planet')) return buildM6();
+  const L = MapLib.build('planet', ENVS.night, 606);
+  // منطقهٔ تخلیه: دورترین نقطه از شروع
+  let far = null, fd = -1;
+  for (const c of L.spawnSpots) { const d = Math.hypot(c[0] - L.start.x, c[1] - L.start.z); if (d > fd) { fd = d; far = c; } }
+  L.extract = { x: far[0], z: far[1], r: 4 };
+  const types = ['soldier', 'soldier', 'soldier', 'rusher', 'soldier', 'armored', 'soldier', 'rusher', 'soldier', 'soldier', 'armored', 'sniper', 'soldier', 'soldier'];
+  const spots = scatterEnemies(L, types, 10, 6);
+  const lamps = pickSpots(L, 10, 0, 7, L.spawnSpots);
+  lamps.forEach(([x, z], i) => L.light(x, gy(L, x, z) + 4, z, 16, i % 2 ? 1 : 0.5, i % 2 ? 0.35 : 0.8, i % 2 ? 0.25 : 1));
+  L.light(far[0], gy(L, far[0], far[1]) + 4, far[1], 18, 0.3, 1, 0.5);
+  scatterPickups(L, 6, 8);
+  return L;
+}
+
+function buildM7Grotto() {
+  if (!MapLib.ready('grotto')) return buildM7();
+  const L = MapLib.build('grotto', ENVS.grotto, 707);
+  const rs = pickSpots(L, 3, 22, 16, L.spawnSpots);
+  rs.forEach(([x, z], i) => { L.generator(x, z, [0.15, 0.3, 0.4]); L.light(x, gy(L, x, z) + 4, z, 18, 0.3, 0.8, 1); guardsAround(L, x, z, i === 0 ? ['armored', 'soldier'] : ['armored', 'heavy']); });
+  scatterEnemies(L, ['soldier', 'soldier', 'rusher', 'soldier', 'armored', 'soldier', 'sniper', 'rusher'], 10, 7);
+  const lamps = pickSpots(L, 6, 0, 8, L.spawnSpots);
+  lamps.forEach(([x, z]) => L.light(x, gy(L, x, z) + 4, z, 16, 0.9, 0.5, 1));
+  L.light(L.start.x, gy(L, L.start.x, L.start.z) + 4, L.start.z, 16, 0.5, 0.9, 1);
+  scatterPickups(L, 6, 8);
+  return L;
+}
+
 const MISSIONS = [
   {
     id: 1, build: buildM1Valley, fa: 'عملیات شروع', en: 'Operation Start', area: 'دره جنگلی', areaEn: 'Forest Valley',
@@ -367,7 +437,7 @@ const MISSIONS = [
     par: 150, reward: 400, xp: 120, bonus: { type: 'headshots', n: 3, fa: 'سه ضربهٔ سر بزن', en: 'Land 3 headshots' }, music: 'menu',
   },
   {
-    id: 2, build: buildM2, fa: 'حمله به پایگاه', en: 'Base Assault', area: 'پایگاه مخفی در بیابان', areaEn: 'Desert Hideout',
+    id: 2, build: buildM2Ridge, fa: 'حمله به پایگاه', en: 'Base Assault', area: 'پایگاه مخفی در بیابان', areaEn: 'Desert Hideout',
     brief: 'سرگرد کیان: «پایگاه مخفی در بیابان برق خود را از سه مولد تأمین می‌کند. مولدها را نابود کن تا سامانهٔ ارتباطی‌شان از کار بیفتد. مراقب تک‌تیراندازهای روی برج‌ها باش.»',
     briefEn: 'Major Kian: "The desert hideout runs on three generators. Destroy them to cut their comms. Watch the snipers on the towers."',
     type: 'destroy', obj: 'سه مولد برق را نابود کن', objEn: 'Destroy the three generators', count: 3,
@@ -381,9 +451,9 @@ const MISSIONS = [
     par: 330, reward: 800, xp: 240, bonus: { type: 'headshots', n: 6, fa: 'شش ضربهٔ سر بزن', en: 'Land 6 headshots' },
   },
   {
-    id: 4, build: buildM4, fa: 'نجات گروگان‌ها', en: 'Hostage Rescue', area: 'بندر و اسکلهٔ نظامی', areaEn: 'Military Harbor',
-    brief: 'سرگرد کیان: «سه نفر از دانشمندان ما در سوله‌های بندر اسیرند. به هر گروگان نزدیک شو و چند ثانیه کنارش بمان تا آزاد شود؛ بعد همه را به منطقهٔ امن برگردان.»',
-    briefEn: 'Major Kian: "Three of our scientists are held in the harbor sheds. Stay close to each until freed, then bring them all back to the safe zone."',
+    id: 4, build: buildM4Glacier, fa: 'نجات گروگان‌ها', en: 'Hostage Rescue', area: 'دره یخی یخچال', areaEn: 'Glacier Gulch',
+    brief: 'سرگرد کیان: «سه نفر از دانشمندان ما در دره‌های یخی اسیرند. به هر گروگان نزدیک شو و چند ثانیه کنارش بمان تا آزاد شود؛ بعد همه را به منطقهٔ امن برگردان.»',
+    briefEn: 'Major Kian: "Three of our scientists are held in the frozen gulch. Stay close to each until freed, then bring them all back to the safe zone."',
     type: 'rescue', obj: 'گروگان‌ها را آزاد و به منطقهٔ امن برسان', objEn: 'Free the hostages and bring them to safety', count: 3,
     par: 360, reward: 1000, xp: 300, bonus: { type: 'noAlarm', fa: 'هیچ گروگانی آسیب نبیند', en: 'No hostage harmed' },
   },
@@ -395,14 +465,14 @@ const MISSIONS = [
     time: 420, par: 300, reward: 1200, xp: 360, forceWeapon: 'sniper', bonus: { type: 'headshots', n: 3, fa: 'سه ضربهٔ سر بزن', en: 'Land 3 headshots' },
   },
   {
-    id: 6, build: buildM6, fa: 'حمله شبانه', en: 'Night Raid', area: 'انبار مهمات صنعتی', areaEn: 'Industrial Depot',
-    brief: 'سرگرد کیان: «شب‌هنگام به انبار مهمات می‌زنیم. دید شبانه را با دکمهٔ «دید» روشن کن. تا انتهای انبار پیش برو و به منطقهٔ تخلیه برس؛ وقت محدود است.»',
-    briefEn: 'Major Kian: "We hit the ammo depot at night. Toggle night vision with the NV button. Push to the far end and reach extraction before time runs out."',
+    id: 6, build: buildM6Planet, fa: 'حمله شبانه', en: 'Night Raid', area: 'پایگاه سیارهٔ سرخ', areaEn: 'Red Planet Outpost',
+    brief: 'سرگرد کیان: «شب‌هنگام به پایگاه سیارهٔ سرخ می‌زنیم. دید شبانه را با دکمهٔ «دید» روشن کن. تا انتهای پایگاه پیش برو و به منطقهٔ تخلیه برس؛ وقت محدود است.»',
+    briefEn: 'Major Kian: "We hit the Red Planet outpost at night. Toggle night vision with the NV button. Push to the far end of the outpost and reach extraction before time runs out."',
     type: 'reach', obj: 'دشمنان را پاک و به منطقهٔ تخلیه برس', objEn: 'Clear hostiles and reach extraction',
     time: 480, par: 360, reward: 1500, xp: 420, bonus: { type: 'kills', n: 14, fa: '۱۴ دشمن را از بین ببر', en: 'Kill 14 enemies' }, needKills: 0.6,
   },
   {
-    id: 7, build: buildM7, fa: 'پایگاه زیرزمینی', en: 'Underground Base', area: 'پایگاه زیرزمینی دشمن', areaEn: 'Enemy Underground Base',
+    id: 7, build: buildM7Grotto, fa: 'پایگاه زیرزمینی', en: 'Underground Base', area: 'پایگاه زیرزمینی دشمن', areaEn: 'Enemy Underground Base',
     brief: 'سرگرد کیان: «نیروهای زرهی و سنگین در پایگاه زیرزمینی منتظرند. سه راکتور انرژی را نابود کن. هر اتاق را با احتیاط پاک کن؛ فضا تنگ است.»',
     briefEn: 'Major Kian: "Armored and heavy troops wait underground. Destroy the three energy reactors. Clear each room carefully — space is tight."',
     type: 'destroy', obj: 'سه راکتور انرژی را نابود کن', objEn: 'Destroy the three reactors', count: 3,

@@ -70,7 +70,13 @@ npm run android:debug
 ```
 خروجی: `android/app/build/outputs/apk/debug/app-debug.apk`
 
+## سطح دشواری و کنترل
+- تنظیمات ← سطح دشواری: آسان / متوسط / سخت (جان، دقت، سرعت واکنش و پاداش دشمنان تغییر می‌کند).
+- تنظیمات ← کمک‌نشانه‌گیری و «شتاب چرخش دوربین» برای چرخش‌های بزرگ روان‌تر.
+
 ## مدل‌های سه‌بعدی (GLB)
+- `g3.json`: اسلحهٔ G-3 بازیکن. `chris.glb`: کاراکتر اصلی (در منوی پروفایل دیده می‌شود).
+- `goldrush`، `glacier`، `planet`، `grotto`: نقشه‌های مأموریت‌های ۲، ۴، ۶، ۷ (ساخته‌شده با `tools/prep-map.js`).
 - `assets/models/heavy.glb`: کاراکتر دشمنان و بازوهای اول‌شخص بازیکن
 - `assets/models/forest.glb`: دره جنگلی (مأموریت‌های ۱ و ۵)
 - `assets/models/tropic.glb` و `tropic-map.json`: شهر ساحلی (مأموریت ۳). با `tools/prep-tropic.js` از مدل اصلی برش و سبک‌سازی شده است.

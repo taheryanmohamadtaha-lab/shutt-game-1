@@ -23,8 +23,8 @@ const Store = (() => {
       name: 'سایه',
       coins: 600,
       xp: 0,
-      weapons: { pistol: { owned: true, up: up() }, ar1: { owned: true, up: up() } },
-      loadout: ['ar1', 'pistol'],
+      weapons: { pistol: { owned: true, up: up() }, g3: { owned: true, up: up() }, ar1: { owned: true, up: up() } },
+      loadout: ['g3', 'pistol'],
       gearGrenade: 0,
       gearArmor: 0,
       missions: { 1: { unlocked: true, stars: 0, best: 0, done: false } },
@@ -34,7 +34,7 @@ const Store = (() => {
       settings: {
         quality: 'medium', shadows: 'soft', sens: 1.0, fov: 75,
         music: 0.5, sfx: 0.8, vibrate: true, lang: 'fa',
-        btnScale: 1, layout: {}, aimAssist: 'high', autoFire: false,
+        btnScale: 1, layout: {}, aimAssist: 'high', autoFire: false, difficulty: 'normal', lookAccel: 'med',
       },
     };
   }
@@ -59,6 +59,8 @@ const Store = (() => {
   try {
     const raw = read();
     if (raw) data = merge(defaults(), JSON.parse(raw));
+    /* مهاجرت: تفنگ G3 برای ذخیره‌های قدیمی */
+    if (raw && !JSON.parse(raw).weapons.g3) { data.weapons.g3 = { owned: true, up: { dmg: 0, acc: 0, rate: 0, mag: 0 } }; if (data.loadout[0] === 'ar1') data.loadout[0] = 'g3'; }
   } catch (e) { data = defaults(); }
 
   function save() {

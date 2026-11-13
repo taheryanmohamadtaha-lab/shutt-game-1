@@ -13,7 +13,7 @@ function newState(L, mission, state) {
   return {
     state, mission, L, env: L.env, enemies: [], grenades: [], pickups: [], hostages: [],
     time: 0, noiseT: 0, pathBudget: 2, flowT: 0, flowI: -1, flowJ: -1, flowAge: 0, shake: 0,
-    diff: { acc: 0.82 + 0.04 * (mission ? mission.id : 1), dmg: 0.88 + 0.035 * (mission ? mission.id : 1) },
+    diff: diffFor(mission),
     stats: { kills: 0, headshots: 0, shots: 0, hits: 0, grenadeKills: 0, damageTaken: 0, score: 0, coins: 0 },
     gens: 0, saved: 0, targets: 0, hostageHarmed: false, boss: null, ending: 0, extractOn: false, timeLeft: 0,
     spawnTotal: 0,
@@ -31,6 +31,17 @@ function setupMenu() {
   FX.reset(menuLevel.env);
   Ctl.enabled = false; Ctl.reset(); Controls.show(false);
   UI.hud(false); document.body.classList.remove('scoped', 'nv');
+}
+
+/* سطح دشواری انتخابی بازیکن (تنظیمات) × افزایش تدریجی با شمارهٔ مأموریت */
+const DIFFS = {
+  easy: { hp: 0.7, acc: 0.62, dmg: 0.55, react: 1.6, rew: 0.8 },
+  normal: { hp: 1, acc: 1, dmg: 1, react: 1, rew: 1 },
+  hard: { hp: 1.35, acc: 1.22, dmg: 1.4, react: 0.55, rew: 1.3 },
+};
+function diffFor(mission) {
+  const D = DIFFS[Store.d.settings.difficulty] || DIFFS.normal, id = mission ? mission.id : 1;
+  return { acc: (0.82 + 0.04 * id) * D.acc, dmg: (0.88 + 0.035 * id) * D.dmg, hp: D.hp, react: D.react, rew: D.rew };
 }
 
 function startMission(id) {
@@ -210,8 +221,9 @@ function endMission(win, why) {
   const accBonus = win ? Math.round(acc * 500) : 0;
   const score = S.score + (win ? 500 : 0) + timeBonus + accBonus + (bonusOk && win ? 300 : 0);
   const stars = win ? 1 + (G.time <= m.par ? 1 : 0) + (bonusOk ? 1 : 0) : 0;
-  const coins = Math.round(S.coins * (win ? 1 : 0.5) + (win ? m.reward * (first ? 1 : 0.4) : 0) + (win && bonusOk ? 150 : 0));
-  const xp = Math.round(S.kills * 5 + (win ? m.xp * (first ? 1 : 0.5) : 20));
+  const rew = (G.diff && G.diff.rew) || 1;
+  const coins = Math.round((S.coins * (win ? 1 : 0.5) + (win ? m.reward * (first ? 1 : 0.4) : 0) + (win && bonusOk ? 150 : 0)) * rew);
+  const xp = Math.round((S.kills * 5 + (win ? m.xp * (first ? 1 : 0.5) : 20)) * rew);
   const oldRank = Store.rank();
   Store.d.coins += coins; Store.d.xp += xp;
   Store.d.stats.deaths += win ? 0 : 1;
@@ -378,14 +390,19 @@ function drawWorld(cam) {
   if (G.state !== 'menu' && P.alive) P.drawViewmodel(vmB, vmtB);
 }
 
+let menuHero = null;
 function render(dt) {
   let cam, zoomFov = 0;
   if (G.state === 'menu') {
-    menuAng += dt * 0.1;
-    const R = 27, cx = 0, cz = -6;
-    const px = cx + Math.sin(menuAng) * R, pz = cz + Math.cos(menuAng) * R, py = 8 + Math.sin(menuAng * 0.7) * 2;
-    const fx = cx - px, fy = 2.5 - py, fz = cz - pz;
-    cam = { x: px, y: py, z: pz, yaw: Math.atan2(-fx, -fz), pitch: Math.atan2(fy, Math.hypot(fx, fz)) };
+    menuAng += dt * 0.35;
+    /* شخصیت اصلی: دوربین نزدیک و آرام جلوی کریس می‌چرخد */
+    const hx = menuLevel.start.x, hz = menuLevel.start.z - 3, hy = menuLevel.terrain ? menuLevel.terrain.h(hx, hz) : 0;
+    const sw = Math.sin(menuAng) * 0.55, R = 3.6;
+    const px = hx + Math.sin(sw) * R, pz = hz + Math.cos(sw) * R, py = hy + 1.35;
+    const fx = hx - px, fy = hy + 2.0 - py, fz = hz - pz;
+    /* کریس پایین‌راست کادر می‌ایستد تا پشت دکمه‌های منو نرود */
+    cam = { x: px, y: py, z: pz, yaw: Math.atan2(-fx, -fz) + 0.42, pitch: Math.atan2(fy, Math.hypot(fx, fz)) };
+    menuHero = { x: hx, y: hy, z: hz };
   } else {
     cam = P.camera();
     if (!P.alive) { cam.y = Math.max(0.3, cam.y - Math.min(1.3, G.ending * 1.2)); cam.pitch = Math.max(-0.9, cam.pitch - G.ending * 0.5); }
@@ -397,6 +414,7 @@ function render(dt) {
     }
   }
   drawWorld(cam);
+  if (G.state === 'menu' && menuHero) Hero.draw(menuHero.x, menuHero.y, menuHero.z, 0);
   // نورها
   tmpLights.length = 0;
   FX.getLights(tmpLights);
@@ -447,8 +465,10 @@ function boot() {
   setupMenu();
   UI.show('splash');
   EModel.load('assets/models/heavy.glb');
+  GunMesh.load('g3', 'assets/models/g3.json');
+  Hero.load('assets/models/chris.glb');
   Forest.load('assets/models/forest.glb');
-  Tropic.load('assets/models/tropic.glb', 'assets/models/tropic-map.json');
+  for (const k of ['tropic', 'goldrush', 'glacier', 'planet', 'grotto']) MapLib.load(k, 'assets/models/' + k + '.glb', 'assets/models/' + k + '-map.json');
   window.addEventListener('resize', () => { GE.resize(QUALITY[Store.d.settings.quality] || 0.78); });
   window.addEventListener('orientationchange', () => setTimeout(() => GE.resize(QUALITY[Store.d.settings.quality] || 0.78), 200));
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (G && G.state === 'play') pauseGame(); Store.save(); } });

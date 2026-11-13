@@ -42,6 +42,13 @@ const WEAPONS = {
     model: { bl: 0.27, bw: 0.04, bh: 0.075, barrel: 0.18, bt: 0.02, stock: 0.17, mag: 0.1, guard: 0.1 },
     desc: 'تفنگ تهاجمی همه‌کاره',
   },
+  g3: {
+    id: 'g3', fa: 'عقرب G-3', en: 'Scorpion G-3', type: 'rifle', mesh: 'g3',
+    dmg: 38, rpm: 480, auto: true, mag: 20, reserve: 140, reload: 2.1, spread: 0.016, ads: 0.26, recoil: 0.034,
+    range: 175, pellets: 1, zoom: 1.7, price: 0, rank: 0, move: 0.98, tracer: [1, 0.9, 0.5],
+    model: { bl: 0.15, bw: 0.045, bh: 0.06, barrel: 0.2, bt: 0.02, stock: 0.2, mag: 0.1, guard: 0.1 },
+    desc: 'تفنگ جنگی سنگین؛ هر گلوله قدرت بالایی دارد',
+  },
   smg: {
     id: 'smg', fa: 'زنبور SM-3', en: 'Hornet SM-3', type: 'smg',
     dmg: 17, rpm: 920, auto: true, mag: 35, reserve: 210, reload: 1.6, spread: 0.028, ads: 0.4, recoil: 0.016,
@@ -85,8 +92,10 @@ const WEAPONS = {
     desc: 'سلاح تخیلی؛ پرتو پلاسما از چند دشمن عبور می‌کند',
   },
 };
-const WEAPON_ORDER = ['pistol', 'ar1', 'smg', 'shotgun', 'ar2', 'lmg', 'sniper', 'pulse'];
+const WEAPON_ORDER = ['pistol', 'g3', 'ar1', 'smg', 'shotgun', 'ar2', 'lmg', 'sniper', 'pulse'];
 for (const k of WEAPON_ORDER) { WEAPONS[k].gun = buildGun(WEAPONS[k].model); }
+/* G3: مدل GLB؛ خط لوله و دید روی مدل واقعی (مقیاس ۰٫۰۷۳، مبدأ روی دستگیره) */
+WEAPONS.g3.gun.muzzle = [0, 0.004, -0.4]; WEAPONS.g3.gun.sightY = 0.04;
 
 /* ارتقا: هر ویژگی تا سطح ۵ */
 const UPG = {

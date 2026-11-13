@@ -141,8 +141,9 @@ class Level {
     this.add(x - cw / 2, 1.0, z - cd / 2, x + cw / 2, 1.5, z + cd / 2, [col[0] * 0.8, col[1] * 0.8, col[2] * 0.9], { mat: 0, kind: 'prop' });
   }
   generator(x, z, col) {
-    const b = this.add(x - 1.2, 0, z - 1.0, x + 1.2, 2.2, z + 1.0, col || [0.2, 0.34, 0.2], { kind: 'gen', hp: 260, mat: 0 });
-    this.add(x - 0.9, 2.2, z - 0.7, x + 0.9, 2.5, z + 0.7, [0.9, 0.7, 0.1], { solid: false, mat: 2, ao: 0, kind: 'glow' });
+    const g0 = this.terrain ? this.terrain.h(x, z) : 0;
+    const b = this.add(x - 1.2, g0 - 0.3, z - 1.0, x + 1.2, g0 + 2.2, z + 1.0, col || [0.2, 0.34, 0.2], { kind: 'gen', hp: 260, mat: 0 });
+    this.add(x - 0.9, g0 + 2.2, z - 0.7, x + 0.9, g0 + 2.5, z + 0.7, [0.9, 0.7, 0.1], { solid: false, mat: 2, ao: 0, kind: 'glow' });
     b.mark = [x, z];
     return b;
   }

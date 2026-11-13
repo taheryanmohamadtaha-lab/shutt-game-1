@@ -83,8 +83,8 @@ const P = {
     /* مغناطیس گلوله: اگر نشانه نزدیک بدن دشمن است، مسیر به‌سمت مرکز بدنش کشیده می‌شود */
     let fx = fx0, fy = fy0, fz = fz0, rx = rx0, rz = rz0, ux = ux0, uy = uy0, uz = uz0;
     const lvl = this.assistLevel(), A = this.assist;
-    if (lvl && A && A.ang < A.rad * [0, 1.6, 2.4, 3.2][lvl] + [0, 0.012, 0.02, 0.03][lvl]) {
-      const b = [0, 0.6, 0.8, 0.92][lvl];
+    if (lvl && A && A.ang < A.rad * [0, 1.8, 2.8, 4.2][lvl] + [0, 0.014, 0.026, 0.045][lvl]) {
+      const b = [0, 0.65, 0.85, 0.96][lvl];
       let sx = fx0 + (A.dx - fx0) * b, sy = fy0 + (A.dy - fy0) * b, sz = fz0 + (A.dz - fz0) * b;
       const sl = Math.hypot(sx, sy, sz); fx = sx / sl; fy = sy / sl; fz = sz / sl;
       const rl = Math.hypot(fz, fx) || 1; rx = -fz / rl; rz = fx / rl;   // right = f × up
@@ -151,21 +151,40 @@ const P = {
     if (!this.alive) return;
     const L = G.L;
     const s = this.slot(), w = this.weapon(), st = weaponStats(s.id);
-    /* نگاه */
-    const look = Ctl.takeLook();
+    /* نگاه: صاف‌سازی (بدون از دست رفتن زاویه) + شتاب سرعتی برای چرخش‌های بزرگ + اینرسی بعد از فلیک */
+    const raw = Ctl.takeLook();
     const zoom = 1 + this.ads * (w.zoom - 1);
     const sens = 0.0042 * Store.d.settings.sens / Math.pow(zoom, 0.85);
     let k = sens;
-    /* کمک نشانه‌گیری: اصطکاک + مغناطیس به‌سمت دشمن */
     const lv = this.assistLevel();
-    const T = this.assist = lv ? this.findAssist(lv) : null;
-    this.onTarget = !!(T && T.ang < T.rad * 1.15);
+    const Lp = this._lp || (this._lp = { px: 0, py: 0, vx: 0, vy: 0, ix: 0, iy: 0, idle: 0 });
+    const accLv = { off: 0, low: 1, med: 2, high: 3 }[Store.d.settings.lookAccel === undefined ? 'med' : Store.d.settings.lookAccel] || 0;
+    const dts = Math.max(dt, 1e-3), rawMag = Math.hypot(raw.x, raw.y);
+    Lp.vx += (raw.x / dts - Lp.vx) * Math.min(1, dt * 12); Lp.vy += (raw.y / dts - Lp.vy) * Math.min(1, dt * 12);
+    const fingers = Ctl.lookFingerDown ? Ctl.lookFingerDown() : rawMag > 0;
+    if (rawMag > 0) { Lp.idle = 0; Lp.ix = Lp.iy = 0; } else Lp.idle += dt;
+    if (!fingers && accLv && this.ads < 0.2 && Lp.idle > 0.03 && Lp.idle < 0.08 && !Lp.ix && !Lp.iy) {
+      const v = Math.hypot(Lp.vx, Lp.vy);
+      if (v > [0, 1100, 900, 700][accLv]) { Lp.ix = Lp.vx; Lp.iy = Lp.vy; }
+    }
+    if (Lp.ix || Lp.iy) { raw.x += Lp.ix * dt; raw.y += Lp.iy * dt; const dec = Math.exp(-dt * 6); Lp.ix *= dec; Lp.iy *= dec; if (Math.hypot(Lp.ix, Lp.iy) < 80) Lp.ix = Lp.iy = 0; }
+    /* کمک نشانه‌گیری: اصطکاک + مغناطیس به‌سمت دشمن */
     const wantsFire = Ctl.fire || this.autoFiring;
+    const T = this.assist = lv ? this.findAssist(lv, wantsFire || this.ads > 0.15) : null;
+    this.onTarget = !!(T && T.ang < T.rad * 1.15);
+    const spd = Math.hypot(Lp.vx, Lp.vy);
+    if (accLv && !(T && T.ang < T.rad * 2.2) && this.ads < 0.5) {
+      const knee = [0, 650, 500, 380][accLv], extra = [0, 0.8, 1.2, 1.8][accLv];
+      k *= 1 + extra * Math.min(1, Math.max(0, (spd - knee) / 1300));
+    }
     if (T) k *= [1, 0.72, 0.55, 0.42][lv];
-    this.yaw -= look.x * k; this.pitch -= look.y * k;
-    if (T && (wantsFire || this.ads > 0.15 || lv >= 3 && T.ang < T.rad * 2.5)) {
-      const act = Math.min(1, Math.hypot(look.x, look.y) / 22);          // اگر بازیکن خودش می‌چرخد کمتر بکش
-      const rate = [0, 3.5, 7, 12][lv] * (1 - 0.75 * act) * (wantsFire ? 1 : 0.55);
+    /* صاف‌سازی نگه‌دارنده: ~۱۸ms تأخیر، بدون تغییر مجموع چرخش */
+    Lp.px += raw.x; Lp.py += raw.y;
+    const sm = 1 - Math.exp(-dt * 55), lx = Lp.px * sm, ly = Lp.py * sm; Lp.px -= lx; Lp.py -= ly;
+    this.yaw -= lx * k; this.pitch -= ly * k;
+    if (T && (wantsFire || this.ads > 0.15 || lv >= 3 && T.ang < T.rad * 3)) {
+      const act = Math.min(1, Math.hypot(raw.x, raw.y) / 26);          // اگر بازیکن خودش می‌چرخد کمتر بکش
+      const rate = [0, 5, 10, 18][lv] * (1 - 0.7 * act) * (wantsFire ? 1 : 0.55);
       const f = Math.min(1, rate * dt);
       this.yaw += T.dyaw * f; this.pitch += T.dpitch * f;
     }
@@ -275,11 +294,11 @@ const P = {
     return v === true ? 3 : v === 'low' ? 1 : v === 'med' ? 2 : v === 'high' ? 3 : 0;
   },
   /* بهترین دشمن در مخروط نشانه‌گیری؛ نتیجه شامل زاویه تا مرکز بدن و جهت لازم برای چرخش */
-  findAssist(lv) {
+  findAssist(lv, wide) {
     const cp = Math.cos(this.pitch);
     const fx = -Math.sin(this.yaw) * cp, fz = -Math.cos(this.yaw) * cp, fy = Math.sin(this.pitch);
     const ex = this.x, ey = this.eyeY(), ez = this.z, L = G.L;
-    const cone = [0, 0.09, 0.16, 0.24][lv];
+    const cone = [0, 0.09, 0.16, 0.24][lv] * (wide ? 1.6 : 1);
     let best = null, bestScore = 1e9;
     const R = this._as || (this._as = { e: null, ang: 0, rad: 0, dx: 0, dy: 0, dz: 0, dyaw: 0, dpitch: 0, dist: 0 });
     for (const e of G.enemies) {
@@ -333,7 +352,9 @@ const P = {
       const x3 = x * cyy + z2 * syy, z3 = -x * syy + z2 * cyy;
       (mat === 2 ? vmt : vm).box(ox + x3, oy + y2, oz + z3, sx, sy, sz, ryg, rxg, col, a === undefined ? 1 : a, mat || 0, 0);
     };
-    for (const p of g.parts) put(p[0], p[1], p[2], p[3], p[4], p[5], PAL[p[6]] || p[6], p[6] === 'blue' || p[6] === 'gold' ? 2 : 0);
+    const useMesh = w.mesh && typeof GunMesh !== 'undefined' && GunMesh.ready;
+    if (useMesh) GunMesh.draw(w.mesh, ox, oy, oz, rxg, ryg, this.flashT > 0 ? 0.08 : 0);
+    else for (const p of g.parts) put(p[0], p[1], p[2], p[3], p[4], p[5], PAL[p[6]] || p[6], p[6] === 'blue' || p[6] === 'gold' ? 2 : 0);
     // دست‌ها: بازوهای مدل Heavy با IK؛ در صورت نبود مدل، دستکش‌های جعبه‌ای
     const bh = w.model.bh, bl = w.model.bl;
     const gtv = (x, y, z) => { const y2 = y * ca - z * sa, z2 = y * sa + z * ca; return [ox + x * cyy + z2 * syy, oy + y2, oz - x * syy + z2 * cyy]; };

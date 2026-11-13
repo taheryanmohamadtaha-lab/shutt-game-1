@@ -240,10 +240,12 @@ const UI = {
     const s = Store.d.settings, opt = (key, val, lbl) => `<button class="seg ${s[key] === val ? 'on' : ''}" data-act="set" data-key="${key}" data-val="${val}">${lbl}</button>`;
     const rng = (key, min, max, step, val) => `<input type="range" data-set="${key}" min="${min}" max="${max}" step="${step}" value="${val}">`;
     return `${this.head(t('تنظیمات', 'Settings'))}<div class="setWrap" data-keep>
+      <div class="srow"><span>${t('سطح دشواری', 'Difficulty')}</span><div class="segs">${opt('difficulty', 'easy', t('آسان', 'Easy'))}${opt('difficulty', 'normal', t('متوسط', 'Normal'))}${opt('difficulty', 'hard', t('سخت', 'Hard'))}</div></div>
       <div class="srow"><span>${t('زبان', 'Language')}</span><div class="segs">${opt('lang', 'fa', 'فارسی')}${opt('lang', 'en', 'English')}</div></div>
       <div class="srow"><span>${t('کیفیت گرافیک', 'Graphics quality')}</span><div class="segs">${opt('quality', 'low', t('پایین', 'Low'))}${opt('quality', 'medium', t('متوسط', 'Medium'))}${opt('quality', 'high', t('بالا', 'High'))}</div></div>
       <div class="srow"><span>${t('کیفیت سایه‌ها', 'Shadow quality')}</span><div class="segs">${opt('shadows', 'off', t('خاموش', 'Off'))}${opt('shadows', 'soft', t('نرم', 'Soft'))}${opt('shadows', 'hard', t('پررنگ', 'Hard'))}</div></div>
       <div class="srow"><span>${t('حساسیت دوربین', 'Look sensitivity')}</span>${rng('sens', 0.3, 2.5, 0.05, s.sens)}<b id="v-sens">${s.sens}</b></div>
+      <div class="srow"><span>${t('شتاب چرخش دوربین', 'Look acceleration')}</span><div class="segs">${opt('lookAccel', 'off', t('خاموش', 'Off'))}${opt('lookAccel', 'low', t('کم', 'Low'))}${opt('lookAccel', 'med', t('متوسط', 'Med'))}${opt('lookAccel', 'high', t('زیاد', 'High'))}</div></div>
       <div class="srow"><span>${t('میدان دید (FOV)', 'Field of view')}</span>${rng('fov', 60, 100, 1, s.fov)}<b id="v-fov">${s.fov}</b></div>
       <div class="srow"><span>${t('صدای موسیقی', 'Music volume')}</span>${rng('music', 0, 1, 0.05, s.music)}<b id="v-music">${Math.round(s.music * 100)}</b></div>
       <div class="srow"><span>${t('صدای افکت‌ها', 'Effects volume')}</span>${rng('sfx', 0, 1, 0.05, s.sfx)}<b id="v-sfx">${Math.round(s.sfx * 100)}</b></div>

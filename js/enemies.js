@@ -75,7 +75,7 @@ class Enemy {
       }
     }
     this.home = { x: this.x, z: this.z };
-    this.yaw = Math.random() * 6.28; this.hp = d.hp; this.maxHp = d.hp;
+    this.yaw = Math.random() * 6.28; this.maxHp = Math.round(d.hp * (G.diff.hp || 1)); this.hp = this.maxHp;
     this.hold = !!(sp.hold || sp.guardBoss); this.guardBoss = !!sp.guardBoss;
     this.target = !!sp.target;
     this.state = this.hold ? 'hold' : 'patrol';
@@ -96,7 +96,7 @@ class Enemy {
   alert(spread) {
     if (this.dead) return;
     if (!this.alerted) {
-      this.alerted = true; this.reactT = 0.3 + Math.random() * 0.5;
+      this.alerted = true; this.reactT = (0.3 + Math.random() * 0.5) * (G.diff.react || 1);
       if (this.state === 'patrol' || this.state === 'hold') this.state = 'engage';
       if (spread) G.alertAround(this.x, this.z, 26, this);
     }

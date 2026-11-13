@@ -106,6 +106,7 @@ const Controls = (() => {
       }
       ptrs.set(e.pointerId, { type: 'look', lx: e.clientX, ly: e.clientY });
     });
+    Ctl.lookFingerDown = () => { for (const r of ptrs.values()) if (r.type === 'look' || (r.type === 'btn' && r.id === 'fire')) return true; return false; };
     root.addEventListener('pointermove', (e) => {
       const r = ptrs.get(e.pointerId); if (!r) return;
       if (r.type === 'drag') {
