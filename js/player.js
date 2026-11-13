@@ -154,7 +154,7 @@ const P = {
     /* نگاه: صاف‌سازی (بدون از دست رفتن زاویه) + شتاب سرعتی برای چرخش‌های بزرگ + اینرسی بعد از فلیک */
     const raw = Ctl.takeLook();
     const zoom = 1 + this.ads * (w.zoom - 1);
-    const sens = 0.0042 * Store.d.settings.sens / Math.pow(zoom, 0.85);
+    const sens = 0.0068 * Store.d.settings.sens / Math.pow(zoom, 0.85);
     let k = sens;
     const lv = this.assistLevel();
     const Lp = this._lp || (this._lp = { px: 0, py: 0, vx: 0, vy: 0, ix: 0, iy: 0, idle: 0 });

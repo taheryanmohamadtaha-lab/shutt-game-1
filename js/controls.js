@@ -21,6 +21,7 @@ const BTN_DEFAULT = {
   sprint: { x: 33, y: 80, s: 56 },
   nv: { x: 50, y: 22, s: 46 },
   pause: { x: 96, y: 8, s: 42 },
+  home: { x: 4, y: 8, s: 42 },
 };
 
 const Controls = (() => {
@@ -69,7 +70,7 @@ const Controls = (() => {
       case 'fire': Ctl.fire = true; break;
       case 'sprint': Ctl.sprint = !Ctl.sprint; updateSprintBtn(); break;
       case 'ads': Ctl.push('ads'); setTimeout(updateAdsBtn, 30); break;
-      case 'pause': Ctl.push('pause'); break;
+      case 'pause': case 'home': Ctl.push('pause'); break;
       default: Ctl.push(id);
     }
   }
@@ -95,7 +96,7 @@ const Controls = (() => {
       try { root.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ }
       if (btn) {
         const id = btn.dataset.b;
-        const rec = { type: 'btn', id, el: btn, lx: e.clientX, ly: e.clientY };
+        const rec = { type: 'btn', id, el: btn, lx: e.clientX, ly: e.clientY, sx: e.clientX, sy: e.clientY };
         ptrs.set(e.pointerId, rec); btnDown(id, e, btn); return;
       }
       if (e.clientX < window.innerWidth * 0.46 && joyId === null) {
@@ -118,7 +119,11 @@ const Controls = (() => {
         applyLayout(); return;
       }
       if (r.type === 'joy') { setJoy(e.clientX, e.clientY); return; }
-      if (r.type === 'look' || (r.type === 'btn' && r.id === 'fire')) {
+      if (r.type === 'btn' && r.id !== 'fire' && r.id !== 'pause' && r.id !== 'home' && !r.conv) {
+        /* کشیدن انگشت از روی هر دکمه‌ای (غیر از شلیک) = چرخش دوربین؛ دکمه فشرده‌نشده حساب می‌شود */
+        if (Math.hypot(e.clientX - r.sx, e.clientY - r.sy) > 16) { r.conv = true; r.el.classList.remove('down'); r.lx = e.clientX; r.ly = e.clientY; }
+      }
+      if (r.type === 'look' || (r.type === 'btn' && (r.id === 'fire' || r.conv))) {
         Ctl.lx += e.clientX - r.lx; Ctl.ly += e.clientY - r.ly; r.lx = e.clientX; r.ly = e.clientY;
       }
     });
