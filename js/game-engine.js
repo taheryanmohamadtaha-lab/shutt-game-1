@@ -461,7 +461,7 @@ void main(){
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
     const fx = -Math.sin(cam.yaw) * cp, fy = sp, fz = -Math.cos(cam.yaw) * cp;
     const useFov = zoomFov || fov;
-    perspective(useFov, aspect, 0.08, 220, proj);
+    perspective(useFov, aspect, 0.15, 150, proj);   // نزدیک‌صفحهٔ بزرگ‌تر: دقت عمق در گوشی‌های ۱۶ بیتی
     lookDir(cam.x, cam.y, cam.z, fx, fy, fz, view);
     mul(proj, view, vp);
 

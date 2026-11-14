@@ -427,9 +427,24 @@ function render(dt) {
   GE.render(cam, dynB, transB, vmB, vmtB, tmpLights, nv, zoomFov);
 }
 
+/* وضوح تصویر تطبیقی: اگر گوشی کند است (کمتر از ~۳۳ فریم) وضوح کم می‌شود تا چرخش و نشانه‌گیری روان بماند */
+const Adapt = { ema: 16, t: 0, scale: null };
+function adaptRes(rawDt) {
+  if (!G || G.state !== 'play' || !(rawDt > 0) || rawDt > 0.5) return;
+  Adapt.ema += (rawDt * 1000 - Adapt.ema) * 0.06; Adapt.t += rawDt;
+  if (Adapt.t < 2) return; Adapt.t = 0;
+  const base = QUALITY[Store.d.settings.quality] || 0.78;
+  let s = Adapt.scale == null ? base : Math.min(Adapt.scale, base);
+  if (Adapt.ema > 30 && s > 0.42) s = Math.max(0.42, s - 0.08);
+  else if (Adapt.ema < 19 && s < base) s = Math.min(base, s + 0.04);
+  if (s !== Adapt.scale) { Adapt.scale = s; GE.resize(s); }
+  window.__fps = Math.round(1000 / Adapt.ema);
+}
+
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = (now - lastT) / 1000; lastT = now;
+  adaptRes(dt);
   if (!(dt > 0)) dt = 0.016;
   if (dt > 0.05) dt = 0.05;
   if (G) {
@@ -450,6 +465,7 @@ function applySettings() {
   GE.setFov(s.fov);
   document.documentElement.lang = s.lang === 'en' ? 'en' : 'fa';
   document.documentElement.dir = s.lang === 'en' ? 'ltr' : 'rtl';
+  Adapt.scale = null;
   if (GE.gl) GE.resize(QUALITY[s.quality] || 0.78);
   Controls.applyLayout();
 }
@@ -469,11 +485,12 @@ function boot() {
   Hero.load('assets/models/chris.glb');
   Forest.load('assets/models/forest.glb');
   for (const k of ['tropic', 'goldrush', 'glacier', 'planet', 'grotto']) MapLib.load(k, 'assets/models/' + k + '.glb', 'assets/models/' + k + '-map.json');
-  window.addEventListener('resize', () => { GE.resize(QUALITY[Store.d.settings.quality] || 0.78); });
+  window.addEventListener('resize', () => { Adapt.scale = null; GE.resize(QUALITY[Store.d.settings.quality] || 0.78); });
   window.addEventListener('orientationchange', () => setTimeout(() => GE.resize(QUALITY[Store.d.settings.quality] || 0.78), 200));
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (G && G.state === 'play') pauseGame(); Store.save(); } });
   document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && G && G.state === 'play' && Ctl.enabled && !('ontouchstart' in window)) pauseGame(); });
-  const CapApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  let CapApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  if (!CapApp && window.Capacitor && window.Capacitor.registerPlugin) { try { CapApp = window.Capacitor.registerPlugin('App'); } catch (er) { CapApp = null; } }
   if (CapApp && CapApp.addListener) CapApp.addListener('backButton', () => UI.back());
   window.addEventListener('beforeunload', () => Store.save());
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && location.hostname !== 'localhost') {

@@ -335,7 +335,7 @@ const P = {
     const bx = Math.sin(this.bob) * 0.012 * Math.min(1, this.speed / 4) * (1 - ads * 0.9);
     const by = Math.abs(Math.cos(this.bob)) * 0.01 * Math.min(1, this.speed / 4) * (1 - ads * 0.9);
     let ox = 0.15 * (1 - ads) + bx - 0.07 * this.sprintK;
-    let oy = -0.105 * (1 - ads) - g.sightY * ads * 0.98 + by - 0.04 * this.sprintK;
+    let oy = -0.105 * (1 - ads) - g.sightY * ads * 0.98 + by - 0.04 * this.sprintK - (w.mesh ? 0.05 * ads : 0);
     let oz = -0.27 - 0.03 * ads + this.rz;
     oy += Math.sin(tm * 1.4) * 0.002;
     let rxg = this.rz * 3 + this.sprintK * 0.25, ryg = this.sprintK * 0.55;

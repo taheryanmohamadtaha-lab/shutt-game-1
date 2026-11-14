@@ -106,6 +106,7 @@ const GLTF = (() => {
         if (n.mesh === undefined || n.skin !== undefined) return;
         this.worldMatrix(ni, W);
         const nm = n.name || '';
+        const jit = opt.jitter ? ((Math.imul(ni + 1, 2654435761) >>> 0) % 7) * opt.jitter : 0;   // جلوگیری از z-fighting سطوح هم‌صفحه
         let skip = false;
         if (opt.filter && !opt.filter(nm, n)) skip = true;
         if (skip) return;
@@ -121,7 +122,7 @@ const GLTF = (() => {
             const v = idx ? idx[k] : k;
             const px = pos.data[v * 3], py = pos.data[v * 3 + 1], pz = pos.data[v * 3 + 2];
             const wx = W[0] * px + W[4] * py + W[8] * pz + W[12] + ox;
-            const wy = W[1] * px + W[5] * py + W[9] * pz + W[13] + oy;
+            const wy = W[1] * px + W[5] * py + W[9] * pz + W[13] + oy + jit;
             const wz = W[2] * px + W[6] * py + W[10] * pz + W[14] + oz;
             let nx = 0, ny = 1, nz = 0;
             if (nor) {

@@ -1,5 +1,5 @@
 /* سرویس‌ورکر: اجرای کاملاً آفلاین پس از اولین بارگذاری */
-const CACHE = 'shadow-operation-v1.4.0';
+const CACHE = 'shadow-operation-v1.5.0';
 const FILES = [
   './', 'index.html', 'manifest.json',
   'css/style.css', 'css/menu.css', 'css/game.css', 'css/mobile.css',

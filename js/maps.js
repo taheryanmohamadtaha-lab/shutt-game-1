@@ -38,7 +38,7 @@ const MapLib = (() => {
     };
     const deco = new GE.Batch(260000);
     const tint = TINT[key] || ((r, g, b) => [r, g, b]);
-    d.model.bakeStatic(deco, { oy: m.yoff, mat: 0, color: (nm, r, g, b) => tint(r, g, b) });
+    d.model.bakeStatic(deco, { oy: m.yoff, jitter: 0.003, mat: 0, color: (nm, r, g, b) => tint(r, g, b) });
     L.deco = deco;
     for (const r of m.rects) L.add(r[0], r[4] - 0.3, r[1], r[2], r[5], r[3], [0.5, 0.45, 0.4], { hidden: true, kind: 'wall' });
     L.start = { x: m.start[0], z: m.start[1], yaw: 0 };

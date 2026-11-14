@@ -381,9 +381,11 @@ const UI = {
     } catch (er) { /* ignore */ }
   },
   exitApp() {
-    const a = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    const C = window.Capacitor; let a = C && C.Plugins && C.Plugins.App;
+    if (!a && C && C.registerPlugin) { try { a = C.registerPlugin('App'); } catch (er) { a = null; } }
     Store.save();
-    if (a && a.exitApp) { a.exitApp(); return; }
+    if (a && a.exitApp) { try { a.exitApp(); return; } catch (er) { /* ادامه */ } }
+    if (window.AndroidBridge && AndroidBridge.exit) { AndroidBridge.exit(); return; }
     window.close();
     this.show('menu'); this.toast(t('برای خروج، برگه یا برنامه را ببندید.', 'Close the tab/app to exit.'), 3000);
   },
